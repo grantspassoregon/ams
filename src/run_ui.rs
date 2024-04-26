@@ -32,7 +32,6 @@ impl UiState {
             };
             ui.button("Drift");
             ui.button("Duplicates");
-
         });
 
         if self.operations.load_visible() {
@@ -63,33 +62,49 @@ impl UiState {
         if self.operations.compare_visible() {
             egui::Window::new("Compare").show(ui, |ui| {
                 if self.operations.compare.table.is_some() {
-                    ui.horizontal(|ui| { ui.label("Filter:");
-                        ui.radio_value(&mut self.operations.compare.status, Some(MatchStatus::Matching), "Matching");
-                        ui.radio_value(&mut self.operations.compare.status, Some(MatchStatus::Divergent), "Divergent");
-                        ui.radio_value(&mut self.operations.compare.status, Some(MatchStatus::Missing), "Missing");
-                        if ui.radio_value(&mut self.operations.compare.status, None, "None").clicked() {
+                    ui.horizontal(|ui| {
+                        ui.label("Filter:");
+                        ui.radio_value(
+                            &mut self.operations.compare.status,
+                            Some(MatchStatus::Matching),
+                            "Matching",
+                        );
+                        ui.radio_value(
+                            &mut self.operations.compare.status,
+                            Some(MatchStatus::Divergent),
+                            "Divergent",
+                        );
+                        ui.radio_value(
+                            &mut self.operations.compare.status,
+                            Some(MatchStatus::Missing),
+                            "Missing",
+                        );
+                        if ui
+                            .radio_value(&mut self.operations.compare.status, None, "None")
+                            .clicked()
+                        {
                             self.operations.compare.table = self.data.compare.clone();
                         };
                     });
                 }
                 if ui.button("Run").clicked() {
-                    self.operations.compare.table = Some(self.data.compare(&self.operations.compare));
+                    let table = Some(self.data.compare(&self.operations.compare));
+                    self.operations.compare.table = table.clone();
+                    self.operations.compare.package = table;
                 }
                 self.operations.compare.combo(ui);
             });
         }
     }
-
 }
 
-
-use std::hash::Hash;
 use std::fmt::Display;
+use std::hash::Hash;
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct HashPanel<K, V>
-    where
-        K: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
-        V: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
+where
+    K: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
+    V: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
 {
     pub data: BTreeMap<K, V>,
     pub key: Option<K>,
@@ -101,11 +116,10 @@ pub struct HashPanel<K, V>
 
 // impl<K: Eq + std::hash::Hash + Ord + Clone + std::fmt::Display, V: std::fmt::Display + Clone + Default + Eq + std::hash::Hash> HashPanel<K, V> {
 impl<K, V> HashPanel<K, V>
-    where
-        K: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
-        V: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
+where
+    K: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
+    V: Clone + PartialEq + Eq + PartialOrd + Ord + Hash + Display + Default,
 {
-
     pub fn new(data: BTreeMap<K, V>) -> Self {
         Self {
             data,
@@ -143,7 +157,8 @@ impl<K, V> HashPanel<K, V>
             ui.label("Tracker disabled.");
         } else {
             ui.horizontal(|ui| {
-                track_item |= ui.add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
+                track_item |= ui
+                    .add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
                     .dragged();
                 scroll_top |= ui.button("|<").clicked();
                 scroll_bottom |= ui.button(">|").clicked();
@@ -151,7 +166,8 @@ impl<K, V> HashPanel<K, V>
         }
 
         ui.separator();
-        ScrollArea::vertical().max_height(400.)
+        ScrollArea::vertical()
+            .max_height(400.)
             .show(ui, |ui| {
                 if scroll_top {
                     ui.scroll_to_cursor(Some(Align::TOP));
@@ -162,13 +178,20 @@ impl<K, V> HashPanel<K, V>
                     } else {
                         for item in 0..=(num_rows - 1) {
                             if track_item && item == self.target {
-                                let response =
-                                    ui.selectable_value(&mut self.value, self.data[keys[item]].clone(), format!("{}: {}", keys[item], self.data[keys[item]]));
+                                let response = ui.selectable_value(
+                                    &mut self.value,
+                                    self.data[keys[item]].clone(),
+                                    format!("{}: {}", keys[item], self.data[keys[item]]),
+                                );
                                 response.scroll_to_me(Some(Align::Center));
                                 self.value = self.data[keys[item]].clone();
                                 self.key = Some(keys[item].clone());
                             } else {
-                                ui.selectable_value(&mut self.value, self.data[keys[item]].clone(), format!("{}: {}", keys[item], self.data[keys[item]]));
+                                ui.selectable_value(
+                                    &mut self.value,
+                                    self.data[keys[item]].clone(),
+                                    format!("{}: {}", keys[item], self.data[keys[item]]),
+                                );
                                 // ui.label(format!("{}: {}", keys[item], self.data[keys[item]]));
                             }
                         }
@@ -226,7 +249,8 @@ impl<K, V> HashPanel<K, V>
             ui.label("Tracker disabled.");
         } else {
             ui.horizontal(|ui| {
-                track_item |= ui.add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
+                track_item |= ui
+                    .add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
                     .dragged();
                 scroll_top |= ui.button("|<").clicked();
                 scroll_bottom |= ui.button(">|").clicked();
@@ -256,20 +280,19 @@ impl<K, V> HashPanel<K, V>
         if scroll_bottom {
             table = table.scroll_to_row(self.data.len(), Some(Align::BOTTOM));
         }
-        table
-            .body(|body| {
-                body.rows(20., panel.data.len(), |mut row| {
-                    let row_index = row.index();
-                    row.set_selected(self.selected.contains(&panel.data[keys[row_index]]));
-                    row.col(|ui| {
-                        ui.label(format!("{}", keys[row_index]));
-                    });
-                    row.col(|ui| {
-                        ui.label(format!("{}", panel.data[keys[row_index]]));
-                    });
-                    self.toggle_row_selection(panel.data[keys[row_index]].clone(), &row.response());
+        table.body(|body| {
+            body.rows(20., panel.data.len(), |mut row| {
+                let row_index = row.index();
+                row.set_selected(self.selected.contains(&panel.data[keys[row_index]]));
+                row.col(|ui| {
+                    ui.label(format!("{}", keys[row_index]));
                 });
+                row.col(|ui| {
+                    ui.label(format!("{}", panel.data[keys[row_index]]));
+                });
+                self.toggle_row_selection(panel.data[keys[row_index]].clone(), &row.response());
             });
+        });
     }
 
     pub fn toggle_row_selection(&mut self, target: V, row_response: &egui::Response) {
@@ -281,7 +304,6 @@ impl<K, V> HashPanel<K, V>
             }
         }
     }
-
 }
 
 #[derive(Clone, Debug, Default)]
@@ -294,12 +316,14 @@ pub struct Panel<T> {
 }
 
 impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Panel<T> {
-
     pub fn new(data: Vec<T>) -> Self {
-        let data = data.iter().map(|v| {
-            let k = Uuid::new_v4();
-            (k, v.clone())
-        }).collect::<HashMap<Uuid, T>>();
+        let data = data
+            .iter()
+            .map(|v| {
+                let k = Uuid::new_v4();
+                (k, v.clone())
+            })
+            .collect::<HashMap<Uuid, T>>();
         Self {
             data,
             ..Default::default()
@@ -307,7 +331,11 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
     }
 
     pub fn combo(&mut self, ui: &mut Ui, label: String) {
-        let mut values = self.data.iter().map(|(k, v)| (k.clone(), v.clone())).collect::<Vec<(Uuid, T)>>();
+        let mut values = self
+            .data
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect::<Vec<(Uuid, T)>>();
         values.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         let mut selected = if let Some(value) = &self.value {
             value.clone()
@@ -343,7 +371,8 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
             ui.label("Tracker disabled.");
         } else {
             ui.horizontal(|ui| {
-                track_item |= ui.add(Slider::new(&mut self.target, 0..=num_rows))
+                track_item |= ui
+                    .add(Slider::new(&mut self.target, 0..=num_rows))
                     .dragged();
                 scroll_top |= ui.button("|<").clicked();
                 scroll_bottom |= ui.button(">|").clicked();
@@ -356,7 +385,10 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
         ui.separator();
 
         let data = panel.data.clone();
-        let mut values = data.iter().map(|(k, v)| (k.clone(), v.clone())).collect::<Vec<(Uuid, T)>>();
+        let mut values = data
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect::<Vec<(Uuid, T)>>();
         values.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         let mut table = TableBuilder::new(ui)
             .striped(true)
@@ -373,18 +405,17 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
         if scroll_bottom {
             table = table.scroll_to_row(self.data.len(), Some(Align::BOTTOM));
         }
-        table
-            .body(|body| {
-                body.rows(20., panel.data.len(), |mut row| {
-                    let row_index = row.index();
-                    row.set_selected(self.selected.contains(&values[row_index].0));
-                    row.col(|ui| {
-                        // ui.label(format!("{}", panel.data[keys[row_index]]));
-                        values[row_index].1.show(ui);
-                    });
-                    self.toggle_row_selection(&values[row_index].0, &row.response());
+        table.body(|body| {
+            body.rows(20., panel.data.len(), |mut row| {
+                let row_index = row.index();
+                row.set_selected(self.selected.contains(&values[row_index].0));
+                row.col(|ui| {
+                    // ui.label(format!("{}", panel.data[keys[row_index]]));
+                    values[row_index].1.show(ui);
                 });
+                self.toggle_row_selection(&values[row_index].0, &row.response());
             });
+        });
     }
 
     pub fn show(&mut self, ui: &mut Ui) {
@@ -406,7 +437,8 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
             ui.label("Tracker disabled.");
         } else {
             ui.horizontal(|ui| {
-                track_item |= ui.add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
+                track_item |= ui
+                    .add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
                     .dragged();
                 scroll_top |= ui.button("|<").clicked();
                 scroll_bottom |= ui.button(">|").clicked();
@@ -416,7 +448,8 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
         ui.separator();
         let data = panel.data.clone();
         let keys = data.keys().collect::<Vec<&Uuid>>();
-        ScrollArea::vertical().max_height(400.)
+        ScrollArea::vertical()
+            .max_height(400.)
             .show(ui, |ui| {
                 if scroll_top {
                     ui.scroll_to_cursor(Some(Align::TOP));
@@ -427,13 +460,20 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
                     } else {
                         for item in 0..=(num_rows - 1) {
                             if track_item && item == self.target {
-                                let response =
-                                    ui.selectable_value(&mut self.value, Some(panel.data[keys[item]].clone()), format!("{}", panel.data[keys[item]]));
+                                let response = ui.selectable_value(
+                                    &mut self.value,
+                                    Some(panel.data[keys[item]].clone()),
+                                    format!("{}", panel.data[keys[item]]),
+                                );
                                 response.scroll_to_me(Some(Align::Center));
                                 self.value = Some(panel.data[keys[item]].clone());
                                 self.toggle_row_selection(keys[item], &response);
                             } else {
-                                ui.selectable_value(&mut self.value, Some(panel.data[keys[item]].clone()), format!("{}", panel.data[keys[item]]));
+                                ui.selectable_value(
+                                    &mut self.value,
+                                    Some(panel.data[keys[item]].clone()),
+                                    format!("{}", panel.data[keys[item]]),
+                                );
                                 // ui.label(format!("{}: {}", keys[item], self.data[keys[item]]));
                             }
                         }
@@ -447,12 +487,11 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
             .inner;
 
         ui.separator();
-        ui.label(
-            if let Some(value) = &self.value {
-                format!("Value selected: {}", value)
-            } else {
-                format!("No value selected.")
-            });
+        ui.label(if let Some(value) = &self.value {
+            format!("Value selected: {}", value)
+        } else {
+            format!("No value selected.")
+        });
     }
 
     pub fn contains(&mut self, fragment: &str) {
@@ -478,15 +517,16 @@ impl<T: PartialOrd + PartialEq + Clone + std::fmt::Display + Card + Default> Pan
     }
 
     pub fn values(&self) -> Vec<String> {
-        self.selected.iter().map(|k| format!("{}", self.data[k])).collect::<Vec<String>>()
+        self.selected
+            .iter()
+            .map(|k| format!("{}", self.data[k]))
+            .collect::<Vec<String>>()
     }
-
 }
 
 pub trait Card {
     fn show(&self, ui: &mut Ui);
 }
-
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 pub struct SearchConfig {
@@ -511,11 +551,13 @@ impl From<&i32> for Year {
 impl Year {
     pub fn years(values: &[i32]) -> Vec<Self> {
         values.iter().map(|v| Self::from(v)).collect::<Vec<Self>>()
-
     }
 
     pub fn to_strings(years: &HashSet<Year>) -> Vec<String> {
-        years.iter().map(|v| format!("{}", v.0)).collect::<Vec<String>>()
+        years
+            .iter()
+            .map(|v| format!("{}", v.0))
+            .collect::<Vec<String>>()
     }
 }
 

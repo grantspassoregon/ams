@@ -1,14 +1,15 @@
 use crate::prelude::{Action, App};
+use aid::prelude::*;
 use std::sync::Arc;
+use wgpu::SurfaceError;
 use winit::{
     event::{Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
     window::Window,
 };
-use wgpu::SurfaceError;
 
-pub async fn run(window: Window, event_loop: EventLoop<()>) {
+pub async fn run(window: Window, event_loop: EventLoop<()>) -> Clean<()> {
     let window = Arc::new(window);
 
     let mut state = App::new(Arc::clone(&window)).await;
@@ -29,8 +30,7 @@ pub async fn run(window: Window, event_loop: EventLoop<()>) {
                     | WindowEvent::KeyboardInput {
                         event:
                             KeyEvent {
-                                logical_key:
-                                    Key::Named(NamedKey::Escape),
+                                logical_key: Key::Named(NamedKey::Escape),
                                 ..
                             },
                         ..
@@ -38,7 +38,7 @@ pub async fn run(window: Window, event_loop: EventLoop<()>) {
                     WindowEvent::ModifiersChanged(modifiers) => {
                         state.modifiers = modifiers.state();
                         tracing::info!("Modifiers changed to {:?}", state.modifiers);
-            }
+                    }
                     WindowEvent::KeyboardInput {
                         event,
                         is_synthetic: false,
@@ -95,4 +95,5 @@ pub async fn run(window: Window, event_loop: EventLoop<()>) {
             _ => {}
         }
     });
+    Ok(())
 }

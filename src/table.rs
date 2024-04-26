@@ -1,6 +1,8 @@
+use address::prelude::{MatchRecord, MatchRecords};
 use egui::{Align, Layout, Sense, Slider, Ui};
 use egui_extras::{Column, TableBuilder};
-use spreadsheet::prelude::{BeaDatum, BeaData};
+use galileo::galileo_types::geo::GeoPoint;
+use spreadsheet::prelude::{BeaData, BeaDatum};
 use std::collections::HashSet;
 use std::marker::PhantomData;
 
@@ -15,7 +17,9 @@ pub struct TableView<T: Tabular<U> + Filtration<T, V> + Clone, U: Columnar, V: D
     phantom: PhantomData<U>,
 }
 
-impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, V: Default> TableView<T, U, V> {
+impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, V: Default>
+    TableView<T, U, V>
+{
     pub fn new(data: T) -> Self {
         Self {
             data,
@@ -60,13 +64,12 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
     pub fn slider(&mut self, ui: &mut Ui, num_rows: usize) -> bool {
         let mut track_item = false;
         if self.config.slider {
-            let mut scroll_top = false;
-            let mut scroll_bottom = false;
             if num_rows == 0 {
                 ui.label("Tracker disabled.");
             } else {
                 ui.horizontal(|ui| {
-                    track_item |= ui.add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
+                    track_item |= ui
+                        .add(Slider::new(&mut self.target, 0..=(num_rows - 1)))
                         .dragged();
                     if ui.button("|<").clicked() {
                         self.target = 0;
@@ -76,18 +79,8 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
                         self.target = num_rows - 1;
                         track_item = true;
                     };
-                    // scroll_top |= ui.button("|<").clicked();
-                    // scroll_bottom |= ui.button(">|").clicked();
                 });
             }
-            // if scroll_top {
-            //     track_item = true;
-            //     self.target = 0;
-            // }
-            // if scroll_bottom {
-            //     track_item = true;
-            //     self.target = num_rows - 1;
-            // }
         }
         track_item
     }
@@ -125,25 +118,31 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
 
         table
             .header(20.0, |mut header| {
-                headers.iter().map(|v| header.col(|ui| {
-                    ui.strong(v);
-                })).for_each(drop);
+                headers
+                    .iter()
+                    .map(|v| {
+                        header.col(|ui| {
+                            ui.strong(v);
+                        })
+                    })
+                    .for_each(drop);
             })
             .body(|body| {
                 body.rows(20., rows.len(), |mut row| {
                     let row_index = row.index();
                     row.set_selected(self.selection.contains(&row_index));
                     let columns = &rows[row_index].values();
-                    columns.iter().map(|v| {
-                        row.col(|ui| {
-                            ui.label(v);
-                        });
-                    }).for_each(drop);
+                    columns
+                        .iter()
+                        .map(|v| {
+                            row.col(|ui| {
+                                ui.label(v);
+                            });
+                        })
+                        .for_each(drop);
                     self.toggle_row_selection(row_index, &row.response());
                 });
             });
-
-
     }
 
     pub fn contains(&self, fragment: &str) -> Vec<U> {

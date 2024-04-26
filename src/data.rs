@@ -1,7 +1,20 @@
-use crate::prelude::{Columnar, Compare, Filtration, Parcels, TableConfig, TableView, Tabular, toggle_select};
-use address::prelude::{JosephineCountySpatialAddresses, GrantsPassSpatialAddresses, MatchRecord, MatchRecords, MatchStatus, SpatialAddresses, Portable};
+use crate::prelude::{
+    toggle_select, Columnar, Compare, Filtration, Parcels, TableConfig, TableView, Tabular,
+};
+use address::prelude::{
+    Address, AddressStatus, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses,
+    MatchRecord, MatchRecords, MatchStatus, Portable, SpatialAddress, SpatialAddresses,
+};
 use egui::{Align, Layout, Sense, Slider, Ui};
 use egui_extras::{Column, TableBuilder};
+use galileo::layer::feature_layer::symbol::Symbol;
+use galileo::render::point_paint::PointPaint;
+use galileo::render::render_bundle::RenderPrimitive;
+use galileo::Color;
+use galileo_types::cartesian::CartesianPoint3d;
+use galileo_types::geometry::Geom;
+use galileo_types::impls::{Contour, Polygon};
+use num_traits::AsPrimitive;
 use rfd::FileDialog;
 use std::collections::HashSet;
 use std::fmt;
@@ -78,7 +91,6 @@ impl Data {
             table.data = table.data.clone().filter(filter);
         }
     }
-
 }
 
 impl Tabular<AddressSource> for Data {
@@ -120,7 +132,6 @@ impl Columnar for AddressSource {
     fn values(&self) -> Vec<String> {
         vec![format!("{self}")]
     }
-
 }
 
 #[derive(EnumIter, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -167,11 +178,15 @@ impl fmt::Display for MatchColumns {
 
 impl Columnar for MatchRecord {
     fn names() -> Vec<String> {
-        MatchColumns::iter().map(|v| format!("{v}")).collect::<Vec<String>>()
+        MatchColumns::iter()
+            .map(|v| format!("{v}"))
+            .collect::<Vec<String>>()
     }
-    
+
     fn values(&self) -> Vec<String> {
-        MatchColumns::iter().map(|v| v.value(self)).collect::<Vec<String>>()
+        MatchColumns::iter()
+            .map(|v| v.value(self))
+            .collect::<Vec<String>>()
     }
 }
 
@@ -191,3 +206,34 @@ impl Filtration<MatchRecords, String> for MatchRecords {
     }
 }
 
+// impl Symbol<AddressPoint> for AddressSymbol {
+//     fn render<'a, N, P>(
+//         &self,
+//         feature: &AddressPoint,
+//         geometry: &'a Geom<P>,
+//         _min_resolution: f64,
+//         ) -> Vec<RenderPrimitive<'a, N, P, Contour<P>, Polygon<P>>>
+//         where
+//             N: AsPrimitive<f32>,
+//             P: CartesianPoint3d<Num = N> + Clone,
+//         {
+//             let size = 7.0 as f32;
+//             let mut primitives = Vec::new();
+//             let Geom::Point(point) = geometry else {
+//                 return primitives;
+//             };
+//             let color = match &feature.address.address.status() {
+//                 AddressStatus::Current => Color::BLUE,
+//                 AddressStatus::Other => Color::from_hex("#dbc200"),
+//                 AddressStatus::Pending => Color::from_hex("#db00d4"),
+//                 AddressStatus::Temporary => Color::from_hex("#db6e00"),
+//                 AddressStatus::Retired => Color::from_hex("#ad0000"),
+//                 AddressStatus::Virtual => Color::GREEN,
+//                 };
+//             primitives.push(RenderPrimitive::new_point_ref(
+//                     point,
+//                     PointPaint::circle(color, size),
+//                     ));
+//             primitives
+//             }
+// }

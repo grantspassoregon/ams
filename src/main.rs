@@ -2,7 +2,6 @@ use ams::prelude::run;
 use polite::Polite;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-
 #[tokio::main]
 async fn main() -> Polite<()> {
     if tracing_subscriber::registry()
@@ -11,7 +10,9 @@ async fn main() -> Polite<()> {
                 .unwrap_or_else(|_| "ams=info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
-        .try_init().is_ok() {}; 
+        .try_init()
+        .is_ok()
+    {};
     tracing::info!("Subscriber initialized.");
 
     let event_loop = winit::event_loop::EventLoop::new().unwrap();

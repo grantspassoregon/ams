@@ -13,12 +13,9 @@ pub struct Operations {
 
 impl Operations {
     pub fn compare(ui: &mut egui::Ui) {
-        if ui.button("Select Subject Addresses").clicked() {
-
-        };
+        if ui.button("Select Subject Addresses").clicked() {};
         ui.button("Select Comparison Addresses");
         ui.button("Run");
-
     }
 
     pub fn compare_visible(&self) -> bool {
@@ -47,15 +44,24 @@ pub struct Compare {
     pub table: Option<TableView<MatchRecords, MatchRecord, String>>,
     pub visible: bool,
     pub status: Option<MatchStatus>,
+    pub package: Option<TableView<MatchRecords, MatchRecord, String>>,
 }
 
 impl Compare {
     pub fn combo(&mut self, ui: &mut egui::Ui) {
         ui.push_id("subject", |ui| {
-            egui::ComboBox::from_label("Select subject source") .selected_text(format!("{:?}", self.subject))
+            egui::ComboBox::from_label("Select subject source")
+                .selected_text(format!("{:?}", self.subject))
                 .show_ui(ui, |ui| {
                     for (i, source) in AddressSource::iter().enumerate() {
-                        if ui.selectable_value(&mut self.subject, source.clone(), format!("{source}")).clicked() {
+                        if ui
+                            .selectable_value(
+                                &mut self.subject,
+                                source.clone(),
+                                format!("{source}"),
+                            )
+                            .clicked()
+                        {
                             self.subject_idx = i;
                             info!("Subject set to {i}");
                         }
@@ -67,13 +73,16 @@ impl Compare {
                 .selected_text(format!("{:?}", self.target))
                 .show_ui(ui, |ui| {
                     for (i, target) in AddressSource::iter().enumerate() {
-                        if ui.selectable_value(&mut self.target, target.clone(), format!("{target}")).clicked() {
+                        if ui
+                            .selectable_value(&mut self.target, target.clone(), format!("{target}"))
+                            .clicked()
+                        {
                             self.target_idx = i;
                             info!("Target set to {i}");
                         }
                     }
                 });
-            });
+        });
         if let Some(t) = &mut self.table {
             if let Some(status) = &self.status {
                 match status {

@@ -1,10 +1,13 @@
-use crate::prelude::{Action, EguiState, KEY_BINDINGS, MOUSE_BINDINGS, UiState, WgpuFrame};
+use crate::prelude::{
+    Action, AddressPoints, EguiState, GalileoState, MatchPoints, UiState, WgpuFrame, KEY_BINDINGS,
+    MOUSE_BINDINGS,
+};
 use std::{iter, sync::Arc};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::event_loop::EventLoop;
 use winit::event::*;
-use winit::window::{Fullscreen, Theme, Window, WindowId};
+use winit::event_loop::EventLoop;
 use winit::keyboard::ModifiersState;
+use winit::window::{Fullscreen, Theme, Window, WindowId};
 
 pub struct App {
     pub surface: Arc<wgpu::Surface<'static>>,
@@ -15,6 +18,7 @@ pub struct App {
     pub window: Arc<Window>,
     pub egui_state: EguiState,
     pub ui_state: UiState,
+    pub galileo_state: GalileoState,
     pub modifiers: ModifiersState,
     pub theme: Theme,
     /// Cursor position over the window.
@@ -87,6 +91,14 @@ impl App {
         let device = Arc::new(device);
         let queue = Arc::new(queue);
 
+        let galileo_state = GalileoState::new(
+            Arc::clone(&window),
+            Arc::clone(&device),
+            Arc::clone(&surface),
+            Arc::clone(&queue),
+            config.clone(),
+        );
+
         let theme = window.theme().unwrap_or(Theme::Dark);
 
         Self {
@@ -98,6 +110,7 @@ impl App {
             window,
             egui_state,
             ui_state: UiState::new(),
+            galileo_state,
             modifiers: Default::default(),
             theme,
             cursor_position: Default::default(),
@@ -106,9 +119,11 @@ impl App {
 
     pub fn about_to_wait(&mut self) {
         // tracing::info!("Removed call to galileo_state.");
+        self.galileo_state.about_to_wait();
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        self.galileo_state.resize(new_size);
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
             self.config.width = new_size.width;
@@ -118,7 +133,20 @@ impl App {
     }
 
     pub fn handle_event(&mut self, event: &WindowEvent) {
-        let _ = self.egui_state.handle_event(&self.window, event);
+        let res = self.egui_state.handle_event(&self.window, event);
+        if !res.consumed {
+            self.galileo_state.handle_event(event);
+        }
+        if let Some(table) = self.ui_state.operations.compare.package.take() {
+            let points = MatchPoints::from(&table.data);
+            self.galileo_state.addresses = Some(points);
+            self.galileo_state.load_addresses();
+            tracing::info!("Records added to map.")
+        }
+        // if self.ui_state.data.addresses.len() != self.galileo_state.addresses.len() {
+        //     self.galileo_state.addresses = self.ui_state.data.addresses.iter().map(|v| v.into()).collect::<Vec<AddressPoints>>();
+        //     self.galileo_state.load_addresses();
+        // }
 
         self.window.request_redraw();
     }
@@ -152,6 +180,8 @@ impl App {
                 texture_view: &texture_view,
                 size: self.size,
             };
+
+            self.galileo_state.render(&wgpu_frame);
 
             self.egui_state
                 .render(&mut wgpu_frame, |ui| self.ui_state.run(ui));
@@ -244,51 +274,56 @@ impl App {
         self.window.set_maximized(!maximized);
     }
 
-    pub fn handle_action(&mut self, event_loop: &EventLoop<()>, window_id: WindowId, action: Action) {
-    //     // let cursor_position = self.cursor_position;
-    //     // let window = self.windows.get_mut(&window_id).unwrap();
-    //     println!("Executing action: {action:?}");
+    pub fn handle_action(
+        &mut self,
+        event_loop: &EventLoop<()>,
+        window_id: WindowId,
+        action: Action,
+    ) {
+        //     // let cursor_position = self.cursor_position;
+        //     // let window = self.windows.get_mut(&window_id).unwrap();
+        //     println!("Executing action: {action:?}");
         match action {
-    //         Action::CloseWindow => {
-    //             // let _ = self.window.remove(&window_id);
-    //         }
-    //         // Action::CreateNewWindow => {
-    //         //     #[cfg(any(x11_platform, wayland_platform))]
-    //         //     if let Err(err) = window.window.request_activation_token() {
-    //         //         println!("Failed to get activation token: {err}");
-    //         //     } else {
-    //         //         return;
-    //         //     }
-    //         //
-    //         //     if let Err(err) = self.create_window(event_loop, None) {
-    //         //         eprintln!("Error creating new window: {err}");
-    //         //     }
-    //         // }
-    //         Action::ToggleResizeIncrements => self.toggle_resize_increments(),
-    //         Action::ToggleCursorVisibility => window.toggle_cursor_visibility(),
-    //         Action::ToggleResizable => window.toggle_resizable(),
-    //         Action::ToggleDecorations => window.toggle_decorations(),
-    //         Action::ToggleFullscreen => window.toggle_fullscreen(),
-    //         Action::ToggleMaximize => window.toggle_maximize(),
-    //         Action::ToggleImeInput => window.toggle_ime(),
-    //         Action::Minimize => window.minimize(),
-    //         Action::NextCursor => window.next_cursor(),
-    //         Action::NextCustomCursor => window.next_custom_cursor(&self.custom_cursors),
-    //         Action::CycleCursorGrab => window.cycle_cursor_grab(),
-    //         Action::DragWindow => window.drag_window(),
-    //         Action::DragResizeWindow => window.drag_resize_window(),
-    //         Action::ShowWindowMenu => window.show_menu(),
+            //         Action::CloseWindow => {
+            //             // let _ = self.window.remove(&window_id);
+            //         }
+            //         // Action::CreateNewWindow => {
+            //         //     #[cfg(any(x11_platform, wayland_platform))]
+            //         //     if let Err(err) = window.window.request_activation_token() {
+            //         //         println!("Failed to get activation token: {err}");
+            //         //     } else {
+            //         //         return;
+            //         //     }
+            //         //
+            //         //     if let Err(err) = self.create_window(event_loop, None) {
+            //         //         eprintln!("Error creating new window: {err}");
+            //         //     }
+            //         // }
+            //         Action::ToggleResizeIncrements => self.toggle_resize_increments(),
+            //         Action::ToggleCursorVisibility => window.toggle_cursor_visibility(),
+            //         Action::ToggleResizable => window.toggle_resizable(),
+            //         Action::ToggleDecorations => window.toggle_decorations(),
+            //         Action::ToggleFullscreen => window.toggle_fullscreen(),
+            //         Action::ToggleMaximize => window.toggle_maximize(),
+            //         Action::ToggleImeInput => window.toggle_ime(),
+            //         Action::Minimize => window.minimize(),
+            //         Action::NextCursor => window.next_cursor(),
+            //         Action::NextCustomCursor => window.next_custom_cursor(&self.custom_cursors),
+            //         Action::CycleCursorGrab => window.cycle_cursor_grab(),
+            //         Action::DragWindow => window.drag_window(),
+            //         Action::DragResizeWindow => window.drag_resize_window(),
+            //         Action::ShowWindowMenu => window.show_menu(),
             Action::PrintHelp => self.print_help(),
-    //         #[cfg(macos_platform)]
-    //         Action::CycleOptionAsAlt => window.cycle_option_as_alt(),
-    //         #[cfg(macos_platform)]
-    //         Action::CreateNewTab => {
-    //             let tab_id = window.window.tabbing_identifier();
-    //             if let Err(err) = self.create_window(event_loop, Some(tab_id)) {
-    //                 eprintln!("Error creating new window: {err}");
-    //             }
+            //         #[cfg(macos_platform)]
+            //         Action::CycleOptionAsAlt => window.cycle_option_as_alt(),
+            //         #[cfg(macos_platform)]
+            //         Action::CreateNewTab => {
+            //             let tab_id = window.window.tabbing_identifier();
+            //             if let Err(err) = self.create_window(event_loop, Some(tab_id)) {
+            //                 eprintln!("Error creating new window: {err}");
+            //             }
             _ => tracing::info!("Other action!"),
-            }
-    //     }
+        }
+        //     }
     }
 }

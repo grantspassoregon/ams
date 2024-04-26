@@ -29,13 +29,13 @@ indicatif = { version = "0.17.8", features = ["rayon"] }
 num-traits = "0.2.18"
 polite = { path = "../cordial/polite", default-features = false, features = ["bin", "gis", "win"] }
 rayon = "1.10.0"
-serde = { version = "1.0.197", features = ["derive"] }
+serde = { version = "1.0.198", features = ["derive"] }
 spreadsheet = { git = "https://github.com/grantspassoregon/spreadsheet" }
 shapefile = "0.6.0"
-tokio = { version = "1.36.0", features = ["tokio-macros", "full"] }
+tokio = { version = "1.37.0", features = ["tokio-macros", "full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-wgpu = "0.19.3"
+wgpu = "0.19.4"
 winit = "0.29.15"
 itertools = "0.12.1"
 egui_extras = { version = "0.27.2", features = ["file", "chrono", "datepicker", "image"] }

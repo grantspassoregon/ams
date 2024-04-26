@@ -1,8 +1,8 @@
 use crate::prelude::*;
+use galileo::galileo_types::cartesian::{CartesianPoint2d, Point2d, Rect};
+use galileo::galileo_types::geometry::CartesianGeometry2d;
+use galileo::galileo_types::impls::{Contour, MultiPolygon};
 use galileo::layer::feature_layer::Feature;
-use galileo_types::cartesian::{CartesianPoint2d, Point2d, Rect};
-use galileo_types::geometry::CartesianGeometry2d;
-use galileo_types::impls::{Contour, MultiPolygon};
 use geo::geometry::Geometry;
 use geojson::FeatureReader;
 use indicatif::ParallelProgressIterator;
@@ -112,13 +112,13 @@ impl Parcel {
     }
 }
 
-impl galileo_types::geometry::Geometry for Parcel {
+impl galileo::galileo_types::geometry::Geometry for Parcel {
     type Point = Point2d;
 
-    fn project<P: galileo_types::geo::Projection<InPoint = Self::Point> + ?Sized>(
+    fn project<P: galileo::galileo_types::geo::Projection<InPoint = Self::Point> + ?Sized>(
         &self,
         projection: &P,
-    ) -> Option<galileo_types::geometry::Geom<P::OutPoint>> {
+    ) -> Option<galileo::galileo_types::geometry::Geom<P::OutPoint>> {
         self.geometry.project(projection)
     }
 }

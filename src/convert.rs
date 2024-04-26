@@ -1,6 +1,6 @@
 // use crate::prelude::*;
-use galileo_types::cartesian::{CartesianPoint2d, Point2d};
-use galileo_types::impls::ClosedContour;
+use galileo::galileo_types::cartesian::{CartesianPoint2d, Point2d};
+use galileo::galileo_types::impls::ClosedContour;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::geometry::Rect;
 use geo_types::{Coord, LineString, MultiPolygon, Point, Polygon};
@@ -21,7 +21,7 @@ impl<T: Debug + Clone> Convert<T> {
 }
 
 impl Convert<MultiPolygon> {
-    pub fn multipolygon(self) -> galileo_types::impls::MultiPolygon<Point2d> {
+    pub fn multipolygon(self) -> galileo::galileo_types::impls::MultiPolygon<Point2d> {
         let conv = self
             .0
             .iter()
@@ -31,15 +31,15 @@ impl Convert<MultiPolygon> {
             .par_iter()
             .cloned()
             .map(|v| v.polygon())
-            .collect::<Vec<galileo_types::impls::Polygon<Point2d>>>();
-        galileo_types::impls::MultiPolygon { parts }
+            .collect::<Vec<galileo::galileo_types::impls::Polygon<Point2d>>>();
+        galileo::galileo_types::impls::MultiPolygon { parts }
     }
 
     pub fn bounded_multipolygon(
         self,
     ) -> (
-        galileo_types::impls::MultiPolygon<Point2d>,
-        galileo_types::cartesian::Rect<f64>,
+        galileo::galileo_types::impls::MultiPolygon<Point2d>,
+        galileo::galileo_types::cartesian::Rect<f64>,
     ) {
         let mut boundaries = Vec::new();
         let conv = self
@@ -55,7 +55,7 @@ impl Convert<MultiPolygon> {
                 boundaries.push(bounds);
                 poly
             })
-            .collect::<Vec<galileo_types::impls::Polygon<Point2d>>>();
+            .collect::<Vec<galileo::galileo_types::impls::Polygon<Point2d>>>();
 
         let mut xmin = f64::MAX;
         let mut ymin = f64::MAX;
@@ -84,17 +84,20 @@ impl Convert<MultiPolygon> {
             }
         }
 
-        let bounds = galileo_types::cartesian::Rect::new(xmin, ymin, xmax, ymax);
+        let bounds = galileo::galileo_types::cartesian::Rect::new(xmin, ymin, xmax, ymax);
 
-        (galileo_types::impls::MultiPolygon { parts }, bounds)
+        (
+            galileo::galileo_types::impls::MultiPolygon { parts },
+            bounds,
+        )
     }
 }
 
 impl Convert<Polygon> {
-    pub fn polygon(self) -> galileo_types::impls::Polygon<Point2d> {
+    pub fn polygon(self) -> galileo::galileo_types::impls::Polygon<Point2d> {
         let (e, i) = self.0.into_inner();
         let ext = Convert::new(e).contour();
-        let mut poly: galileo_types::impls::Polygon<Point2d> = ext.into();
+        let mut poly: galileo::galileo_types::impls::Polygon<Point2d> = ext.into();
         let mut int = Vec::new();
         if !i.is_empty() {
             for item in i {
@@ -108,8 +111,8 @@ impl Convert<Polygon> {
     pub fn bounded_polygon(
         self,
     ) -> (
-        galileo_types::impls::Polygon<Point2d>,
-        Option<galileo_types::cartesian::Rect<f64>>,
+        galileo::galileo_types::impls::Polygon<Point2d>,
+        Option<galileo::galileo_types::cartesian::Rect<f64>>,
     ) {
         let ext = self.0.exterior();
         let conv = Convert::new(ext.clone()).bounds();
@@ -120,7 +123,7 @@ impl Convert<Polygon> {
             let max = rect.max();
             let xmax = max.x();
             let ymax = max.y();
-            let bounds = galileo_types::cartesian::Rect::new(xmin, ymin, xmax, ymax);
+            let bounds = galileo::galileo_types::cartesian::Rect::new(xmin, ymin, xmax, ymax);
             (self.polygon(), Some(bounds))
         } else {
             (self.polygon(), None)

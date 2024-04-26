@@ -2,4 +2,5 @@ target
 Cargo.lock
 data/bea.data
 .env
+.tile_cache
 
