@@ -4,6 +4,7 @@ use crate::prelude::{
 use address::prelude::{
     Address, AddressStatus, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses,
     MatchRecord, MatchRecords, MatchStatus, Portable, SpatialAddress, SpatialAddresses,
+    Addresses, Vectorized,
 };
 use egui::{Align, Layout, Sense, Slider, Ui};
 use egui_extras::{Column, TableBuilder};
@@ -43,14 +44,16 @@ impl Data {
         let mut records = SpatialAddresses::default();
         if let Some(path) = files {
             if let Ok(values) = GrantsPassSpatialAddresses::from_csv(path.clone()) {
-                if values.records.len() > records.records.len() {
+                if values.len() > records.len() {
                     self.address_sources.push(AddressSource::GrantsPass);
                     records = SpatialAddresses::from(&values.records[..]);
                 }
             }
-            if let Ok(values) = JosephineCountySpatialAddresses::from_csv(path.clone()) {
-                if values.records.len() > records.records.len() {
+            if let Ok(mut values) = JosephineCountySpatialAddresses::from_csv(path.clone()) {
+                if values.len() > records.len() {
                     self.address_sources.push(AddressSource::JosephineCounty);
+                    info!("Running citify.");
+                    values.citify();
                     records = SpatialAddresses::from(&values.records[..]);
                 }
             }
