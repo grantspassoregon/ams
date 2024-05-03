@@ -44,6 +44,7 @@ pub struct Compare {
     pub table: Option<TableView<MatchRecords, MatchRecord, String>>,
     pub visible: bool,
     pub status: Option<MatchStatus>,
+    pub status_pkg: Option<MatchStatus>,
     pub package: Option<TableView<MatchRecords, MatchRecord, String>>,
 }
 
@@ -83,27 +84,46 @@ impl Compare {
                     }
                 });
         });
-        if let Some(t) = &mut self.table {
-            if let Some(status) = &self.status {
-                match status {
-                    MatchStatus::Matching => t.filter = Some("matching".to_string()),
-                    MatchStatus::Divergent => t.filter = Some("divergent".to_string()),
-                    MatchStatus::Missing => t.filter = Some("missing".to_string()),
-                }
-            }
-        }
+        self.filter_panel(ui);
         if let Some(t) = &mut self.table {
             t.table(ui);
         }
     }
 
-    pub fn toggle(&mut self) {
-        self.visible = !self.visible;
+    pub fn filter_panel(&mut self, ui: &mut egui::Ui) {
+        if let Some(t) = &mut self.table {
+            ui.horizontal(|ui| {
+                ui.label("Filter:");
+                if ui
+                    .radio_value(&mut t.filter, Some("matching".to_string()), "Matching")
+                    .clicked()
+                {
+                    t.view = t.data.clone().filter("matching");
+                    t.package = Some(t.view.clone());
+                };
+                if ui
+                    .radio_value(&mut t.filter, Some("divergent".to_string()), "Divergent")
+                    .clicked()
+                {
+                    t.view = t.data.clone().filter("divergent");
+                    t.package = Some(t.view.clone());
+                };
+                if ui
+                    .radio_value(&mut t.filter, Some("missing".to_string()), "Missing")
+                    .clicked()
+                {
+                    t.view = t.data.clone().filter("missing");
+                    t.package = Some(t.view.clone());
+                };
+                if ui.radio_value(&mut t.filter, None, "None").clicked() {
+                    t.view = t.data.clone();
+                    t.package = Some(t.view.clone());
+                };
+            });
+        }
     }
 
-    pub fn filter(&mut self, filter: &str) {
-        if let Some(table) = &mut self.table {
-            table.data = table.data.clone().filter(filter);
-        }
+    pub fn toggle(&mut self) {
+        self.visible = !self.visible;
     }
 }

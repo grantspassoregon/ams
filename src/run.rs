@@ -12,7 +12,7 @@ use winit::{
 pub async fn run(window: Window, event_loop: EventLoop<()>) -> Clean<()> {
     let window = Arc::new(window);
 
-    let mut state = App::new(Arc::clone(&window)).await;
+    let mut state = App::try_init(Arc::clone(&window)).await?;
 
     let _ = event_loop.run(move |event, ewlt| {
         ewlt.set_control_flow(ControlFlow::Wait);

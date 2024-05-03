@@ -131,6 +131,55 @@ impl Convert<Polygon> {
     }
 }
 
+impl Convert<shapefile::record::polygon::Polygon> {
+    pub fn geo_polygons(self) -> Vec<geo::geometry::Polygon> {
+        let mut polys = Vec::new();
+        let mut outer = None;
+        let mut inner = Vec::new();
+        for ring in self.0.into_inner() {
+            match ring.clone() {
+                shapefile::record::polygon::PolygonRing::Outer(_) => match outer {
+                    Some(x) => {
+                        let poly = geo::geometry::Polygon::new(x, inner);
+                        polys.push(poly);
+                        outer = None;
+                        inner = Vec::new();
+                    }
+                    None => {
+                        let conv = Convert::new(ring);
+                        let line = conv.geo_linestring();
+                        outer = Some(line);
+                    }
+                },
+                shapefile::record::polygon::PolygonRing::Inner(_) => {
+                    let conv = Convert::new(ring);
+                    let line = conv.geo_linestring();
+                    inner.push(line);
+                }
+            }
+        }
+        if polys.is_empty() {
+            if let Some(ring) = outer {
+                polys.push(geo::geometry::Polygon::new(ring, inner));
+            }
+        }
+
+        polys
+    }
+}
+
+impl Convert<shapefile::record::polygon::PolygonRing<shapefile::record::point::Point>> {
+    pub fn geo_linestring(self) -> geo::geometry::LineString {
+        let mut pts = Vec::new();
+        for i in self.0.into_inner() {
+            let convert = Convert::new(i);
+            let pt = convert.geo_coord();
+            pts.push(pt);
+        }
+        geo::geometry::LineString::new(pts)
+    }
+}
+
 impl Convert<LineString> {
     pub fn bounds(&self) -> Option<Rect<f64>> {
         self.0.bounding_rect()
@@ -175,6 +224,39 @@ impl CartesianPoint2d for Convert<Point> {
 impl Convert<Point> {
     pub fn point(self) -> Point2d {
         Point2d::new(self.x(), self.y())
+    }
+
+    pub fn geo_point(self) -> geo::geometry::Point {
+        geo::point!(x: self.x(), y: self.y())
+    }
+
+    pub fn geo_coord(self) -> geo::geometry::Coord {
+        geo::coord!(x: self.x(), y: self.y())
+    }
+}
+
+impl CartesianPoint2d for Convert<shapefile::record::point::Point> {
+    type Num = f64;
+    fn x(&self) -> Self::Num {
+        self.clone().into_inner().x
+    }
+
+    fn y(&self) -> Self::Num {
+        self.clone().into_inner().y
+    }
+}
+
+impl Convert<shapefile::record::point::Point> {
+    pub fn point(self) -> Point2d {
+        Point2d::new(self.x(), self.y())
+    }
+
+    pub fn geo_point(self) -> geo::geometry::Point {
+        geo::point!(x: self.x(), y: self.y())
+    }
+
+    pub fn geo_coord(self) -> geo::geometry::Coord {
+        geo::coord!(x: self.x(), y: self.y())
     }
 }
 

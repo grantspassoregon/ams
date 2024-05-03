@@ -1,7 +1,5 @@
-use address::prelude::{MatchRecord, MatchRecords};
 use egui::{Align, Layout, Sense, Slider, Ui};
 use egui_extras::{Column, TableBuilder};
-use galileo::galileo_types::geo::GeoPoint;
 use spreadsheet::prelude::{BeaData, BeaDatum};
 use std::collections::HashSet;
 use std::marker::PhantomData;
@@ -9,11 +7,13 @@ use std::marker::PhantomData;
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TableView<T: Tabular<U> + Filtration<T, V> + Clone, U: Columnar, V: Default> {
     pub data: T,
+    pub view: T,
     pub search: String,
     pub selection: HashSet<usize>,
     pub target: usize,
     pub config: TableConfig,
     pub filter: Option<V>,
+    pub package: Option<T>,
     phantom: PhantomData<U>,
 }
 
@@ -21,16 +21,24 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
     TableView<T, U, V>
 {
     pub fn new(data: T) -> Self {
+        let view = data.clone();
+        let package = Some(data.clone());
         Self {
             data,
+            view,
+            package,
             ..Default::default()
         }
     }
 
     pub fn with_config(data: T, config: TableConfig) -> Self {
+        let view = data.clone();
+        let package = Some(data.clone());
         Self {
             data,
+            view,
             config,
+            package,
             ..Default::default()
         }
     }
@@ -91,17 +99,10 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
     }
 
     pub fn table(&mut self, ui: &mut Ui) {
-        let mut data = self.data.clone();
-        if let Some(filter) = &self.filter {
-            data = data.clone().filter(filter);
-        }
-        if self.filter.is_none() {
-            data = self.data.clone();
-        }
-        let num_rows = data.len();
+        let num_rows = self.view.len();
         let track_item = self.slider(ui, num_rows);
         let headers = T::headers();
-        let mut rows = data.rows();
+        let mut rows = self.view.rows();
         if !self.search.is_empty() {
             rows = self.contains(&self.search);
         }
@@ -147,7 +148,7 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
 
     pub fn contains(&self, fragment: &str) -> Vec<U> {
         let mut data = Vec::new();
-        let rows = self.data.rows();
+        let rows = self.view.rows();
         for row in rows {
             let mut contains = false;
             let cols = row.values();

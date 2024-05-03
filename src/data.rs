@@ -5,16 +5,18 @@ use address::prelude::{
     Address, AddressStatus, Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses,
     MatchRecord, MatchRecords, MatchStatus, Portable, SpatialAddress, SpatialAddresses, Vectorized,
 };
-use egui::{Align, Layout, Sense, Slider, Ui};
-use egui_extras::{Column, TableBuilder};
-use galileo::layer::feature_layer::symbol::Symbol;
-use galileo::render::point_paint::PointPaint;
-use galileo::render::render_bundle::RenderPrimitive;
-use galileo::Color;
-use galileo_types::cartesian::CartesianPoint3d;
-use galileo_types::geometry::Geom;
-use galileo_types::impls::{Contour, Polygon};
-use num_traits::AsPrimitive;
+use aid::prelude::Clean;
+use egui::Ui;
+// use egui::{Align, Layout, Sense, Slider, Ui};
+// use egui_extras::{Column, TableBuilder};
+// use galileo::layer::feature_layer::symbol::Symbol;
+// use galileo::render::point_paint::PointPaint;
+// use galileo::render::render_bundle::RenderPrimitive;
+// use galileo::Color;
+// use galileo_types::cartesian::CartesianPoint3d;
+// use galileo_types::geometry::Geom;
+// use galileo_types::impls::{Contour, Polygon};
+// use num_traits::AsPrimitive;
 use rfd::FileDialog;
 use std::collections::HashSet;
 use std::fmt;
@@ -46,6 +48,7 @@ impl Data {
                 if values.len() > records.len() {
                     self.address_sources.push(AddressSource::GrantsPass);
                     records = SpatialAddresses::from(&values.records[..]);
+                    // records.save("data/addresses.data").unwrap();
                 }
             }
             if let Ok(mut values) = JosephineCountySpatialAddresses::from_csv(path.clone()) {
@@ -53,6 +56,7 @@ impl Data {
                     self.address_sources.push(AddressSource::JosephineCounty);
                     values.citify();
                     records = SpatialAddresses::from(&values.records[..]);
+                    // records.save("data/county_addresses.data").unwrap();
                 }
             }
             if records.records.len() > 0 {
@@ -62,6 +66,15 @@ impl Data {
                 info!("No records found.");
             }
         }
+    }
+
+    pub fn sample_data(&mut self) -> Clean<()> {
+        self.address_sources = vec![AddressSource::GrantsPass, AddressSource::JosephineCounty];
+        let mut records = Vec::new();
+        records.push(SpatialAddresses::load("data/addresses.data")?);
+        records.push(SpatialAddresses::load("data/county_addresses.data")?);
+        self.addresses = records;
+        Ok(())
     }
 
     pub fn combo(&mut self, ui: &mut Ui, label: &str) {

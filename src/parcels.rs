@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use aid::prelude::*;
 use galileo::galileo_types::cartesian::{CartesianPoint2d, Point2d, Rect};
 use galileo::galileo_types::geometry::CartesianGeometry2d;
 use galileo::galileo_types::impls::{Contour, MultiPolygon};
@@ -8,7 +9,7 @@ use geojson::FeatureReader;
 use indicatif::ParallelProgressIterator;
 use indicatif::ProgressBar;
 use num_traits::Num;
-use polite::{FauxPas, Polite};
+// use polite::{FauxPas, Polite};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use shapefile::record::polygon::Polygon;
@@ -25,8 +26,8 @@ pub struct Owner {
 }
 
 impl TryFrom<shapefile::dbase::Record> for Owner {
-    type Error = FauxPas;
-    fn try_from(shp: shapefile::dbase::Record) -> Polite<Self> {
+    type Error = Bandage;
+    fn try_from(shp: shapefile::dbase::Record) -> Clean<Self> {
         let mut name = None;
         match shp.get("NAME") {
             Some(shapefile::dbase::FieldValue::Character(Some(owner))) => {
@@ -54,7 +55,7 @@ impl TryFrom<shapefile::dbase::Record> for Owner {
         if let Some(id) = map_id {
             Ok(Owner { name, id })
         } else {
-            Err(FauxPas::Unknown)
+            Err(Bandage::Unknown)
         }
     }
 }
@@ -80,7 +81,7 @@ impl Parcel {
     //     geo
     // }
 
-    pub fn read_record(geo: Geometry, record: shapefile::dbase::Record) -> Polite<Self> {
+    pub fn read_record(geo: Geometry, record: shapefile::dbase::Record) -> Clean<Self> {
         let owner = Owner::try_from(record)?;
         let mut multipoly = None;
         let mut boundary = None;
@@ -104,10 +105,10 @@ impl Parcel {
                 };
                 Ok(parcel)
             } else {
-                Err(FauxPas::Unknown)
+                Err(Bandage::Unknown)
             }
         } else {
-            Err(FauxPas::Unknown)
+            Err(Bandage::Unknown)
         }
     }
 }
@@ -155,7 +156,7 @@ pub struct Parcels {
 }
 
 impl Parcels {
-    pub fn from_geojson<P: AsRef<Path>>(path: P) -> Polite<Self> {
+    pub fn from_geojson<P: AsRef<Path>>(path: P) -> Clean<Self> {
         let file = File::open(path)?;
         let reader = FeatureReader::from_reader(file);
 
@@ -177,7 +178,7 @@ impl Parcels {
         Ok(Parcels { records })
     }
 
-    // pub fn from_shp<P: AsRef<Path>>(path: P, transform: Option<&str>) -> Polite<Self> {
+    // pub fn from_shp<P: AsRef<Path>>(path: P, transform: Option<&str>) -> Clean<Self> {
     //     let polygons = shapefile::read_as::<_, shapefile::Polygon, shapefile::dbase::Record>(path).unwrap();
     //     let records = polygons
     //         .par_iter()
@@ -194,7 +195,7 @@ impl Parcels {
     //     Ok(Self { records })
     // }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Polite<()> {
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Clean<()> {
         info!("Serializing to binary.");
         let encode = bincode::serialize(self)?;
         info!("Writing to file.");
@@ -202,7 +203,7 @@ impl Parcels {
         Ok(())
     }
 
-    pub fn load<P: AsRef<Path>>(path: P) -> Polite<Self> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Clean<Self> {
         info!("Deserializing from binary.");
         let vec: Vec<u8> = std::fs::read(path)?;
         let parcels: Parcels = bincode::deserialize(&vec[..])?;

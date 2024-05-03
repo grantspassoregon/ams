@@ -1,13 +1,13 @@
 use crate::prelude::{
-    Action, AddressPoints, EguiState, GalileoState, MatchPoints, UiState, WgpuFrame, KEY_BINDINGS,
-    MOUSE_BINDINGS,
+    Action, EguiState, GalileoState, MatchPoints, UiState, WgpuFrame, KEY_BINDINGS, MOUSE_BINDINGS,
 };
+use aid::prelude::Clean;
 use std::{iter, sync::Arc};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::*;
 use winit::event_loop::EventLoop;
 use winit::keyboard::ModifiersState;
-use winit::window::{Fullscreen, Theme, Window, WindowId};
+use winit::window::{Fullscreen, Icon, Theme, Window, WindowId};
 
 pub struct App {
     pub surface: Arc<wgpu::Surface<'static>>,
@@ -27,6 +27,12 @@ pub struct App {
 
 impl App {
     pub async fn new(window: Arc<Window>) -> Self {
+        Self::try_init(window)
+            .await
+            .expect("Could not initialize app.")
+    }
+
+    pub async fn try_init(window: Arc<Window>) -> Clean<Self> {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -34,7 +40,7 @@ impl App {
             ..Default::default()
         });
 
-        let surface = instance.create_surface(window.clone()).unwrap();
+        let surface = instance.create_surface(window.clone())?;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -63,8 +69,8 @@ impl App {
                 },
                 None,
             )
-            .await
-            .unwrap();
+            .await?;
+        // .unwrap();
 
         let surface_caps = surface.get_capabilities(&adapter);
         let surface_format = surface_caps
@@ -101,7 +107,7 @@ impl App {
 
         let theme = window.theme().unwrap_or(Theme::Dark);
 
-        Self {
+        Ok(Self {
             surface,
             device,
             queue,
@@ -114,7 +120,7 @@ impl App {
             modifiers: Default::default(),
             theme,
             cursor_position: Default::default(),
-        }
+        })
     }
 
     pub fn about_to_wait(&mut self) {
@@ -137,18 +143,30 @@ impl App {
         if !res.consumed {
             self.galileo_state.handle_event(event);
         }
-        if let Some(table) = self.ui_state.operations.compare.package.take() {
-            let points = MatchPoints::from(&table.data);
-            self.galileo_state.addresses = Some(points);
-            self.galileo_state.load_addresses();
-            tracing::info!("Records added to map.")
+
+        if let Some(table) = &mut self.ui_state.operations.compare.table {
+            if let Some(package) = table.package.take() {
+                tracing::info!("Package taken.");
+                let points = MatchPoints::from(&package);
+                self.galileo_state.addresses = Some(points);
+                self.galileo_state.load_addresses();
+                tracing::info!("Records added to map.");
+            }
         }
-        // if self.ui_state.data.addresses.len() != self.galileo_state.addresses.len() {
-        //     self.galileo_state.addresses = self.ui_state.data.addresses.iter().map(|v| v.into()).collect::<Vec<AddressPoints>>();
-        //     self.galileo_state.load_addresses();
-        // }
 
         self.window.request_redraw();
+    }
+
+    pub fn load_icon(bytes: &[u8]) -> Clean<Icon> {
+        let (icon_rgba, icon_width, icon_height) = {
+            let image = image::load_from_memory(bytes)
+                .expect("Could not load icon.")
+                .into_rgba8();
+            let (width, height) = image.dimensions();
+            let rgba = image.into_raw();
+            (rgba, width, height)
+        };
+        Ok(Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Bad icon."))
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

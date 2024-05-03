@@ -1,13 +1,11 @@
+use crate::prelude::WgpuFrame;
 use egui::Context;
 use egui_wgpu::Renderer;
 use egui_wgpu::ScreenDescriptor;
-
 use egui_winit::{EventResponse, State};
 use wgpu::{Device, TextureFormat};
 use winit::event::WindowEvent;
 use winit::window::Window;
-
-use super::WgpuFrame;
 
 pub struct EguiState {
     pub context: Context,

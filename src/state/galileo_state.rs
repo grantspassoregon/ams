@@ -1,5 +1,4 @@
-use crate::prelude::{AddressPoints, AddressSymbol, MatchPoints, MatchSymbol, WgpuFrame};
-use address::prelude::SpatialAddresses;
+use crate::prelude::{MatchPoints, MatchSymbol, WgpuFrame};
 use galileo::control::{EventPropagation, MouseEvent, UserEvent};
 use galileo::galileo_types::cartesian::Point2d;
 use galileo::galileo_types::cartesian::Size;
@@ -162,6 +161,10 @@ impl GalileoState {
         let mut map = self.map.write().expect("poisoned lock");
         let layers = map.layers_mut();
         if let Some(points) = &self.addresses {
+            tracing::info!("Empty? {}", layers.is_empty());
+            if layers.len() > 1 {
+                layers.pop();
+            }
             layers.push(FeatureLayer::new(
                 points.records.clone(),
                 MatchSymbol {},

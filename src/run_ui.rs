@@ -1,5 +1,4 @@
 use crate::prelude::{Data, Operations};
-use address::prelude::MatchStatus;
 use egui::{Align, Color32, Context, Layout, RichText, ScrollArea, Sense, Slider, TextStyle, Ui};
 use egui_extras::{Column, TableBuilder};
 use itertools::sorted;
@@ -26,6 +25,9 @@ impl UiState {
             ui.heading("Operations");
             if ui.button("Load Data").clicked() {
                 self.operations.toggle_load();
+            }
+            if ui.button("Sample Data").clicked() {
+                self.data.sample_data().unwrap();
             }
             if ui.button("Compare").clicked() {
                 self.operations.toggle_compare();
@@ -61,36 +63,9 @@ impl UiState {
 
         if self.operations.compare_visible() {
             egui::Window::new("Compare").show(ui, |ui| {
-                if self.operations.compare.table.is_some() {
-                    ui.horizontal(|ui| {
-                        ui.label("Filter:");
-                        ui.radio_value(
-                            &mut self.operations.compare.status,
-                            Some(MatchStatus::Matching),
-                            "Matching",
-                        );
-                        ui.radio_value(
-                            &mut self.operations.compare.status,
-                            Some(MatchStatus::Divergent),
-                            "Divergent",
-                        );
-                        ui.radio_value(
-                            &mut self.operations.compare.status,
-                            Some(MatchStatus::Missing),
-                            "Missing",
-                        );
-                        if ui
-                            .radio_value(&mut self.operations.compare.status, None, "None")
-                            .clicked()
-                        {
-                            self.operations.compare.table = self.data.compare.clone();
-                        };
-                    });
-                }
                 if ui.button("Run").clicked() {
                     let table = Some(self.data.compare(&self.operations.compare));
-                    self.operations.compare.table = table.clone();
-                    self.operations.compare.package = table;
+                    self.operations.compare.table = table;
                 }
                 self.operations.compare.combo(ui);
             });
