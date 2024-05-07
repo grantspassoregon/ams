@@ -149,9 +149,19 @@ impl App {
                 tracing::info!("Package taken.");
                 let points = MatchPoints::from(&package);
                 self.galileo_state.addresses = Some(points);
-                self.galileo_state.load_addresses();
+                self.galileo_state.load_addresses(1).unwrap();
                 tracing::info!("Records added to map.");
             }
+        }
+
+        if let Some(pkg) = &self.ui_state.operations.lexis.boundary_pkg.take() {
+            self.galileo_state.boundary = Some(pkg.clone());
+            self.galileo_state.load_boundary(1).unwrap();
+        }
+
+        if let Some(view) = &self.ui_state.operations.lexis.address_pkg.take() {
+            self.galileo_state.lexis = Some(view.clone());
+            self.galileo_state.load_lexis(2).unwrap();
         }
 
         self.window.request_redraw();

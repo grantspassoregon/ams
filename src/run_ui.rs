@@ -1,4 +1,5 @@
 use crate::prelude::{Data, Operations};
+use address::prelude::Portable;
 use egui::{Align, Color32, Context, Layout, RichText, ScrollArea, Sense, Slider, TextStyle, Ui};
 use egui_extras::{Column, TableBuilder};
 use itertools::sorted;
@@ -32,8 +33,19 @@ impl UiState {
             if ui.button("Compare").clicked() {
                 self.operations.toggle_compare();
             };
-            ui.button("Drift");
-            ui.button("Duplicates");
+            if ui.button("Drift").clicked() {
+                self.operations.toggle_drift();
+            };
+            if ui.button("Duplicates").clicked() {
+                self.operations.toggle_duplicates();
+            };
+            if ui.button("LexisNexis").clicked() {
+                if self.operations.lexis.addresses.len() != self.data.addresses.len() {
+                    self.operations.lexis.addresses = self.data.addresses.clone();
+                    self.operations.lexis.sources = self.data.address_sources.clone();
+                }
+                self.operations.toggle_lexis();
+            };
         });
 
         if self.operations.load_visible() {
@@ -68,6 +80,12 @@ impl UiState {
                     self.operations.compare.table = table;
                 }
                 self.operations.compare.combo(ui);
+            });
+        }
+
+        if self.operations.lexis_visible() {
+            egui::Window::new("LexisNexis").show(ui, |ui| {
+                self.operations.lexis.combo(ui);
             });
         }
     }

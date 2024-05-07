@@ -5,6 +5,7 @@ use geo::algorithm::bounding_rect::BoundingRect;
 use geo::geometry::Rect;
 use geo_types::{Coord, LineString, MultiPolygon, Point, Polygon};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use shapefile::record::traits::HasXY;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -93,6 +94,13 @@ impl Convert<MultiPolygon> {
     }
 }
 
+impl Convert<geo::geometry::MultiPolygon> {
+    pub fn geo_to_multipolygon(self) -> galileo::galileo_types::impls::MultiPolygon<Point2d> {
+        let parts = self.0.iter().map(|v| Convert::new(v.clone()).polygon()).collect::<Vec<galileo::galileo_types::impls::Polygon<Point2d>>>();
+        galileo::galileo_types::impls::MultiPolygon { parts }
+    }
+}
+
 impl Convert<Polygon> {
     pub fn polygon(self) -> galileo::galileo_types::impls::Polygon<Point2d> {
         let (e, i) = self.0.into_inner();
@@ -168,7 +176,57 @@ impl Convert<shapefile::record::polygon::Polygon> {
     }
 }
 
+impl Convert<shapefile::record::polygon::GenericPolygon<shapefile::record::point::PointZ>> {
+    pub fn geo_polygons(self) -> Vec<geo::geometry::Polygon> {
+        tracing::info!("Calling convert to multipolygon.");
+        let mut polys = Vec::new();
+        let mut outer = None;
+        let mut inner = Vec::new();
+        for ring in self.0.into_inner() {
+            match ring.clone() {
+                shapefile::record::polygon::PolygonRing::Outer(_) => match outer {
+                    Some(x) => {
+                        let poly = geo::geometry::Polygon::new(x, inner);
+                        polys.push(poly);
+                        outer = None;
+                        inner = Vec::new();
+                    }
+                    None => {
+                        let conv = Convert::new(ring);
+                        let line = conv.geo_linestring();
+                        outer = Some(line);
+                    }
+                },
+                shapefile::record::polygon::PolygonRing::Inner(_) => {
+                    let conv = Convert::new(ring);
+                    let line = conv.geo_linestring();
+                    inner.push(line);
+                }
+            }
+        }
+        if polys.is_empty() {
+            if let Some(ring) = outer {
+                polys.push(geo::geometry::Polygon::new(ring, inner));
+            }
+        }
+
+        polys
+    }
+}
+
 impl Convert<shapefile::record::polygon::PolygonRing<shapefile::record::point::Point>> {
+    pub fn geo_linestring(self) -> geo::geometry::LineString {
+        let mut pts = Vec::new();
+        for i in self.0.into_inner() {
+            let convert = Convert::new(i);
+            let pt = convert.geo_coord();
+            pts.push(pt);
+        }
+        geo::geometry::LineString::new(pts)
+    }
+}
+
+impl Convert<shapefile::record::polygon::PolygonRing<shapefile::record::point::PointZ>> {
     pub fn geo_linestring(self) -> geo::geometry::LineString {
         let mut pts = Vec::new();
         for i in self.0.into_inner() {
@@ -207,6 +265,14 @@ impl Convert<LineString> {
             })
             .collect::<Vec<Point2d>>();
         ClosedContour::new(points)
+    }
+}
+
+impl Convert<geo_types::Rect> {
+    pub fn rect(self) -> galileo::galileo_types::cartesian::Rect {
+        let min = self.0.min();
+        let max = self.0.max();
+        galileo::galileo_types::cartesian::Rect::new(min.x, min.y, max.x, max.y)
     }
 }
 
@@ -257,6 +323,20 @@ impl Convert<shapefile::record::point::Point> {
 
     pub fn geo_coord(self) -> geo::geometry::Coord {
         geo::coord!(x: self.x(), y: self.y())
+    }
+}
+
+impl Convert<shapefile::record::point::PointZ> {
+    pub fn point(self) -> Point2d {
+        Point2d::new(self.0.x(), self.0.y())
+    }
+
+    pub fn geo_point(self) -> geo::geometry::Point {
+        geo::point!(x: self.0.x(), y: self.0.y())
+    }
+
+    pub fn geo_coord(self) -> geo::geometry::Coord {
+        geo::coord!(x: self.0.x(), y: self.0.y())
     }
 }
 

@@ -25,6 +25,14 @@ pub struct AddressPoint {
     pub geo_point: GeoPoint2d,
 }
 
+impl AddressPoint {
+    pub fn geo_point(&self) -> geo::geometry::Point {
+        let x = CartesianPoint2d::x(self);
+        let y = CartesianPoint2d::y(self);
+        geo::geometry::Point::new(x, y)
+    }
+}
+
 impl From<&SpatialAddress> for AddressPoint {
     fn from(address: &SpatialAddress) -> Self {
         let point = Point2d::new(CartesianPoint2d::x(address), CartesianPoint2d::y(address));

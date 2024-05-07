@@ -1,4 +1,8 @@
-use crate::prelude::{MatchPoints, MatchSymbol, WgpuFrame};
+use crate::prelude::{AddressPoints, AddressSymbol, BoundaryView, BoundarySymbol, MatchPoints, MatchSymbol, WgpuFrame};
+use address::address::Address;
+use address::address_components::AddressStatus;
+use aid::prelude::Clean;
+use address::prelude::SpatialAddresses;
 use galileo::control::{EventPropagation, MouseEvent, UserEvent};
 use galileo::galileo_types::cartesian::Point2d;
 use galileo::galileo_types::cartesian::Size;
@@ -24,6 +28,8 @@ pub struct GalileoState {
     renderer: Arc<RwLock<WgpuRenderer>>,
     map: Arc<RwLock<galileo::Map>>,
     pub addresses: Option<MatchPoints>,
+    pub boundary: Option<BoundaryView>,
+    pub lexis: Option<Vec<SpatialAddresses>>,
     pointer_position: Arc<RwLock<Point2d>>,
 }
 
@@ -102,6 +108,8 @@ impl GalileoState {
             renderer,
             map,
             addresses: Default::default(),
+            boundary: Default::default(),
+            lexis: Default::default(),
             pointer_position,
         }
     }
@@ -157,12 +165,11 @@ impl GalileoState {
     //     }
     // }
 
-    pub fn load_addresses(&mut self) {
-        let mut map = self.map.write().expect("poisoned lock");
+    pub fn load_addresses(&mut self, index: usize) -> Clean<()> {
+        let mut map = self.map.write()?;
         let layers = map.layers_mut();
         if let Some(points) = &self.addresses {
-            tracing::info!("Empty? {}", layers.is_empty());
-            if layers.len() > 1 {
+            while layers.len() > index {
                 layers.pop();
             }
             layers.push(FeatureLayer::new(
@@ -172,5 +179,51 @@ impl GalileoState {
             ));
             tracing::info!("Layer pushed to map.");
         }
+        Ok(())
+    }
+
+    pub fn load_boundary(&mut self, index: usize) -> Clean<()> {
+        let mut map = self.map.write()?;
+        let layers = map.layers_mut();
+        if let Some(view) = &self.boundary {
+            while layers.len() > index {
+                layers.pop();
+            }
+            layers.push(FeatureLayer::new(
+                vec![view.clone()],
+                BoundarySymbol {},
+                Crs::EPSG3857,
+            ));
+            tracing::info!("Layer pushed to map.");
+        }
+        Ok(())
+    }
+
+    pub fn load_lexis(&mut self, index: usize) -> Clean<()> {
+        let mut map = self.map.write()?;
+        let layers = map.layers_mut();
+        if let Some(lexis) = &self.lexis {
+            let mut records = AddressPoints::from(&lexis[0]);
+            records.records.iter_mut().map(|a| *a.address.status_mut() = AddressStatus::Current).for_each(drop);
+            let mut other = AddressPoints::from(&lexis[1]);
+            other.records.iter_mut().map(|a| *a.address.status_mut() = AddressStatus::Retired).for_each(drop);
+            while layers.len() > index {
+                layers.pop();
+            }
+            layers.push(FeatureLayer::new(
+                records.records,
+                AddressSymbol {},
+                Crs::EPSG3857,
+            ));
+            tracing::info!("Included addresses pushed to map.");
+            layers.push(FeatureLayer::new(
+                other.records,
+                AddressSymbol {},
+                Crs::EPSG3857,
+            ));
+            tracing::info!("Excluded addresses pushed to map.");
+        }
+        
+        Ok(())
     }
 }

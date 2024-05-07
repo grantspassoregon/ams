@@ -2,22 +2,13 @@ use crate::prelude::{
     toggle_select, Columnar, Compare, Filtration, Parcels, TableConfig, TableView, Tabular,
 };
 use address::prelude::{
-    Address, AddressStatus, Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses,
-    MatchRecord, MatchRecords, MatchStatus, Portable, SpatialAddress, SpatialAddresses, Vectorized,
+    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses,
+    MatchRecord, MatchRecords, Portable, SpatialAddresses, Vectorized,
 };
 use aid::prelude::Clean;
 use egui::Ui;
-// use egui::{Align, Layout, Sense, Slider, Ui};
-// use egui_extras::{Column, TableBuilder};
-// use galileo::layer::feature_layer::symbol::Symbol;
-// use galileo::render::point_paint::PointPaint;
-// use galileo::render::render_bundle::RenderPrimitive;
-// use galileo::Color;
-// use galileo_types::cartesian::CartesianPoint3d;
-// use galileo_types::geometry::Geom;
-// use galileo_types::impls::{Contour, Polygon};
-// use num_traits::AsPrimitive;
 use rfd::FileDialog;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
@@ -117,7 +108,7 @@ impl Tabular<AddressSource> for Data {
     }
 }
 
-#[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, EnumIter)]
+#[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, EnumIter, Deserialize, Serialize)]
 pub enum AddressSource {
     GrantsPass,
     JosephineCounty,

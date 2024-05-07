@@ -15,7 +15,7 @@ pub mod prelude {
     pub use crate::address::{
         AddressPoint, AddressPoints, AddressSymbol, MatchPoint, MatchPoints, MatchSymbol,
     };
-    pub use crate::boundaries::{Boundary, CityLimits, PublicSafetyAgreement};
+    pub use crate::boundaries::{Boundary, BoundaryView, BoundarySymbol, CityLimits, PublicSafetyAgreement};
     pub use crate::controls::{Action, Binding, KEY_BINDINGS, MOUSE_BINDINGS};
     pub use crate::convert::Convert;
     pub use crate::data::{AddressSource, Data};

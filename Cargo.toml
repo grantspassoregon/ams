@@ -46,3 +46,4 @@ strum = { version = "0.26.2", features = ["strum_macros", "derive"] }
 strum_macros = "0.26.2"
 image = "0.25.1"
 geozero-shp = "0.4.0"
+prettydiff = "0.6.4"

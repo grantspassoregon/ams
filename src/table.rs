@@ -1,10 +1,11 @@
 use egui::{Align, Layout, Sense, Slider, Ui};
 use egui_extras::{Column, TableBuilder};
+use serde::{Deserialize, Serialize};
 use spreadsheet::prelude::{BeaData, BeaDatum};
 use std::collections::HashSet;
 use std::marker::PhantomData;
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
 pub struct TableView<T: Tabular<U> + Filtration<T, V> + Clone, U: Columnar, V: Default> {
     pub data: T,
     pub view: T,
@@ -171,7 +172,7 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct TableConfig {
     pub search: bool,
     pub slider: bool,
