@@ -2,7 +2,7 @@ use crate::prelude::{
     toggle_select, Columnar, Compare, Filtration, Parcels, TableConfig, TableView, Tabular,
 };
 use address::prelude::{
-    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses,
+    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024,
     MatchRecord, MatchRecords, Portable, SpatialAddresses, Vectorized,
 };
 use aid::prelude::Clean;
@@ -42,7 +42,7 @@ impl Data {
                     // records.save("data/addresses.data").unwrap();
                 }
             }
-            if let Ok(mut values) = JosephineCountySpatialAddresses::from_csv(path.clone()) {
+            if let Ok(mut values) = JosephineCountySpatialAddresses2024::from_csv(path.clone()) {
                 if values.len() > records.len() {
                     self.address_sources.push(AddressSource::JosephineCounty);
                     values.citify();
