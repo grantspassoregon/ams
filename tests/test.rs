@@ -1,5 +1,8 @@
+use address::prelude::{
+    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024, Portable,
+    SpatialAddresses,
+};
 use aid::{error::Bandage, prelude::Clean};
-use address::prelude::{Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024, Portable, SpatialAddresses};
 use ams::prelude::*;
 use geo::algorithm::bool_ops::BooleanOps;
 use tracing::info;
@@ -38,14 +41,17 @@ fn integration() -> Clean<()> {
 }
 
 fn city_addresses() -> Clean<()> {
-    let addr = GrantsPassSpatialAddresses::from_csv("c:/users/erose/geojson/addresses_20240508.csv")?;
+    let addr =
+        GrantsPassSpatialAddresses::from_csv("c:/users/erose/geojson/addresses_20240508.csv")?;
     let addr = SpatialAddresses::from(&addr.records[..]);
     addr.save("data/addresses.data")?;
     Ok(())
 }
 
 fn county_addresses() -> Clean<()> {
-    let addr = JosephineCountySpatialAddresses2024::from_csv("c:/users/erose/geojson/county_addresses_20240508.csv")?;
+    let addr = JosephineCountySpatialAddresses2024::from_csv(
+        "c:/users/erose/geojson/county_addresses_20240508.csv",
+    )?;
     let mut addr = SpatialAddresses::from(&addr.records[..]);
     addr.citify();
     addr.save("data/county_addresses.data")?;

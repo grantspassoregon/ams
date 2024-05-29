@@ -96,7 +96,11 @@ impl Convert<MultiPolygon> {
 
 impl Convert<geo::geometry::MultiPolygon> {
     pub fn geo_to_multipolygon(self) -> galileo::galileo_types::impls::MultiPolygon<Point2d> {
-        let parts = self.0.iter().map(|v| Convert::new(v.clone()).polygon()).collect::<Vec<galileo::galileo_types::impls::Polygon<Point2d>>>();
+        let parts = self
+            .0
+            .iter()
+            .map(|v| Convert::new(v.clone()).polygon())
+            .collect::<Vec<galileo::galileo_types::impls::Polygon<Point2d>>>();
         galileo::galileo_types::impls::MultiPolygon { parts }
     }
 }

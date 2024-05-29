@@ -1,13 +1,18 @@
-use crate::prelude::{AddressPoints, AddressSource, Boundary, BoundaryView, Columnar, Filtration, TableView, Tabular};
-use address::prelude::{Addresses, LexisNexis, LexisNexisItem, MatchRecord, MatchRecords, MatchStatus, Portable, SpatialAddress, SpatialAddresses};
+use crate::prelude::{
+    AddressPoints, AddressSource, Boundary, BoundaryView, Columnar, Filtration, TableView, Tabular,
+};
+use address::prelude::{
+    Addresses, LexisNexis, LexisNexisItem, MatchRecord, MatchRecords, MatchStatus, Portable,
+    SpatialAddress, SpatialAddresses,
+};
 use aid::prelude::*;
 use geo::algorithm::contains::Contains;
 use rayon::prelude::*;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use strum_macros::EnumIter;
 use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use tracing::info;
 
 #[derive(Debug, Default, Clone, PartialEq, Deserialize, Serialize)]
@@ -184,9 +189,10 @@ impl Lexis {
                 boundary_pkg: Some(boundary_view),
             })
         } else {
-            Err(Bandage::Hint("Could not load lexis boundary view.".to_string()))
+            Err(Bandage::Hint(
+                "Could not load lexis boundary view.".to_string(),
+            ))
         }
-
     }
 
     pub fn combo(&mut self, ui: &mut egui::Ui) {
@@ -198,9 +204,7 @@ impl Lexis {
                 .show_ui(ui, |ui| {
                     for (i, source) in self.sources.iter().enumerate() {
                         if ui
-                            .selectable_label(i == self.selected,
-                                format!("{source}"),
-                            )
+                            .selectable_label(i == self.selected, format!("{source}"))
                             .clicked()
                         {
                             self.selected = i;
@@ -214,7 +218,11 @@ impl Lexis {
                     let mut other = Vec::new();
                     let target = &self.addresses[self.selected];
                     let ap = AddressPoints::from(target);
-                    let gp = ap.records.par_iter().map(|v| v.geo_point()).collect::<Vec<geo::geometry::Point>>();
+                    let gp = ap
+                        .records
+                        .par_iter()
+                        .map(|v| v.geo_point())
+                        .collect::<Vec<geo::geometry::Point>>();
                     for (i, pt) in gp.iter().enumerate() {
                         // info!("Point: {:#?}", pt);
                         // info!("Contained: {}", self.boundary.geometry.contains(pt));
@@ -246,7 +254,6 @@ impl Lexis {
                         }
                     }
                 }
-
             });
         }
         if let Some(view) = &mut self.view {
@@ -269,7 +276,6 @@ impl Tabular<LexisNexisItem> for LexisNexis {
     fn rows(&self) -> Vec<LexisNexisItem> {
         self.records.clone()
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter, Deserialize, Serialize)]
@@ -300,7 +306,9 @@ impl fmt::Display for LexisNexisColumns {
 
 impl Columnar for LexisNexisItem {
     fn names() -> Vec<String> {
-        LexisNexisColumns::iter().map(|v| v.to_string()).collect::<Vec<String>>()
+        LexisNexisColumns::iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
     }
 
     fn values(&self) -> Vec<String> {
@@ -329,4 +337,3 @@ impl Filtration<LexisNexis, String> for LexisNexis {
         self
     }
 }
-

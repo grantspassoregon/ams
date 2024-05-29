@@ -1,25 +1,29 @@
 use crate::prelude::Convert;
 use address::prelude::load_bin;
 use aid::prelude::Clean;
-use galileo::Color;
 use galileo::galileo_types::cartesian::{CartesianPoint2d, CartesianPoint3d, Point2d, Rect};
 use galileo::galileo_types::geometry::CartesianGeometry2d;
 use galileo::galileo_types::geometry::Geom;
 use galileo::galileo_types::impls::{Contour, Polygon};
-use galileo::layer::feature_layer::{Feature, symbol};
+use galileo::layer::feature_layer::{symbol, Feature};
 use galileo::render::render_bundle::RenderPrimitive;
+use galileo::Color;
 use geo::algorithm::bounding_rect::BoundingRect;
 use num_traits::AsPrimitive;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+/// The `Boundary` struct represents a boundary polygon using the `geo` crate for geoprocessing.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Boundary {
+    /// The `name` field provides a user-readable handle for the boundary.
     pub name: String,
+    /// The `geometry` field provides the `geo` representation of the polygon geometry.
     pub geometry: geo::geometry::MultiPolygon,
 }
 
 impl Boundary {
+    /// Creates a new `Boundary` struct from the constituent parts, `name` and `geometry`.
     pub fn new(name: &str, geometry: geo::geometry::MultiPolygon) -> Self {
         Self {
             name: name.to_owned(),
@@ -27,6 +31,7 @@ impl Boundary {
         }
     }
 
+    /// The `from_shp` method converts from shapefiles of type [`shapefile::Polygon'].
     pub fn from_shp<P: AsRef<Path>>(path: P, name: &str) -> Clean<Self> {
         let polygons = shapefile::read_shapes_as::<_, shapefile::Polygon>(path)?;
         let mut polys = Vec::new();
@@ -41,6 +46,7 @@ impl Boundary {
         })
     }
 
+    /// The `from_shp_z` method converts from shapefiles of type [`shapefile::PolygonZ'].
     pub fn from_shp_z<P: AsRef<Path>>(path: P, name: &str) -> Clean<Self> {
         let polygons = shapefile::read_shapes_as::<_, shapefile::PolygonZ>(path)?;
         let mut polys = Vec::new();
@@ -66,14 +72,21 @@ impl Boundary {
     }
 }
 
+/// The `BoundaryView` struct represents a boundary polygon using the `galileo` library for GIS
+/// display.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct BoundaryView {
+    /// The `geometry` field contains the `galileo` representation of the polygon geometry.
     pub geometry: galileo::galileo_types::impls::MultiPolygon<Point2d>,
+    /// The `bounds` field contains the bounding rectangle of the polgyon, required by `galileo` a
+    /// trait [`CartesianGeometry2d`].
     pub bounds: Rect,
+    /// The `selected` field indicates the polygon is currently selected in GIS.
     pub selected: bool,
 }
 
 impl BoundaryView {
+    /// The `from_shp` method converts from a [`Boundary`].
     pub fn from_shp(shp: &Boundary) -> Option<Self> {
         let rect = shp.geometry.bounding_rect();
         let geometry = Convert::new(shp.geometry.clone()).geo_to_multipolygon();
@@ -143,9 +156,9 @@ impl BoundarySymbol {
         };
         let fill = Color::TRANSPARENT;
         symbol::SimplePolygonSymbol::new(fill)
-                .with_stroke_color(stroke)
-                .with_stroke_width(2.0)
-                .with_stroke_offset(-1.0)
+            .with_stroke_color(stroke)
+            .with_stroke_width(2.0)
+            .with_stroke_offset(-1.0)
     }
 }
 
@@ -160,8 +173,7 @@ impl symbol::Symbol<BoundaryView> for BoundarySymbol {
         N: AsPrimitive<f32>,
         P: CartesianPoint3d<Num = N> + Clone,
     {
-        self.polygon(feature)
-            .render(&(), geometry, min_resolution)
+        self.polygon(feature).render(&(), geometry, min_resolution)
     }
 }
 
@@ -205,10 +217,7 @@ impl CityLimitsView {
         let geometry = Convert::new(shp.geometry.clone()).geo_to_multipolygon();
         if let Some(bounds) = rect {
             let bounds = Convert::new(bounds).rect();
-            Some(Self {
-                geometry,
-                bounds,
-            })
+            Some(Self { geometry, bounds })
         } else {
             None
         }
@@ -251,7 +260,6 @@ impl Feature for CityLimitsView {
         self
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PublicSafetyAgreement {

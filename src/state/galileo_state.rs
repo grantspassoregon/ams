@@ -1,8 +1,10 @@
-use crate::prelude::{AddressPoints, AddressSymbol, BoundaryView, BoundarySymbol, MatchPoints, MatchSymbol, WgpuFrame};
+use crate::prelude::{
+    AddressPoints, AddressSymbol, BoundarySymbol, BoundaryView, MatchPoints, MatchSymbol, WgpuFrame,
+};
 use address::address::Address;
 use address::address_components::AddressStatus;
-use aid::prelude::Clean;
 use address::prelude::SpatialAddresses;
+use aid::prelude::Clean;
 use galileo::control::{EventPropagation, MouseEvent, UserEvent};
 use galileo::galileo_types::cartesian::Point2d;
 use galileo::galileo_types::cartesian::Size;
@@ -204,9 +206,17 @@ impl GalileoState {
         let layers = map.layers_mut();
         if let Some(lexis) = &self.lexis {
             let mut records = AddressPoints::from(&lexis[0]);
-            records.records.iter_mut().map(|a| *a.address.status_mut() = AddressStatus::Current).for_each(drop);
+            records
+                .records
+                .iter_mut()
+                .map(|a| *a.address.status_mut() = AddressStatus::Current)
+                .for_each(drop);
             let mut other = AddressPoints::from(&lexis[1]);
-            other.records.iter_mut().map(|a| *a.address.status_mut() = AddressStatus::Retired).for_each(drop);
+            other
+                .records
+                .iter_mut()
+                .map(|a| *a.address.status_mut() = AddressStatus::Retired)
+                .for_each(drop);
             while layers.len() > index {
                 layers.pop();
             }
@@ -223,7 +233,7 @@ impl GalileoState {
             ));
             tracing::info!("Excluded addresses pushed to map.");
         }
-        
+
         Ok(())
     }
 }

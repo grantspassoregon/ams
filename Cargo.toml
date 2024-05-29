@@ -17,36 +17,36 @@ aid = { git = "https://github.com/grantspassoregon/aid.git", default-features = 
 bincode = "1.3.3"
 csv = "1.3.0"
 egui = "0.27.2"
+egui_dock = { version = "0.12.0", features = ["serde"] }
+egui_extras = { version = "0.27.2", features = ["file", "chrono", "datepicker", "image"] }
 egui-wgpu = "0.27.2"
 egui-winit = "0.27.2"
-egui_dock = { version = "0.12.0", features = ["serde"] }
 galileo = { git = "https://github.com/Maximkaaa/galileo" }
 galileo-types = { git = "https://github.com/Maximkaaa/galileo" }
 geo = "0.28.0"
 geo-types = "0.7.13"
 geojson = "0.24.1"
 geozero = "0.13.0"
+geozero-shp = "0.4.0"
+image = "0.25.1"
 indicatif = { version = "0.17.8", features = ["rayon"] }
+itertools = "0.13.0"
 num-traits = "0.2.18"
 # polite = { path = "../cordial/polite", default-features = false, features = ["bin", "img", "gis", "win"] }
+prettydiff = "0.7.0"
 rayon = "1.10.0"
+rfd = { version = "0.14.1", features = ["tokio"] }
 serde = { version = "1.0.198", features = ["derive"] }
 spreadsheet = { git = "https://github.com/grantspassoregon/spreadsheet" }
 shapefile = "0.6.0"
+strum = { version = "0.26.2", features = ["strum_macros", "derive"] }
+strum_macros = "0.26.2"
 tokio = { version = "1.37.0", features = ["tokio-macros", "full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 wgpu = "0.19.4"
 winit = "0.29.15"
-itertools = "0.13.0"
-egui_extras = { version = "0.27.2", features = ["file", "chrono", "datepicker", "image"] }
 uuid = { version = "1.8.0", features = ["serde", "v4"] }
-rfd = { version = "0.14.1", features = ["tokio"] }
-strum = { version = "0.26.2", features = ["strum_macros", "derive"] }
-strum_macros = "0.26.2"
-image = "0.25.1"
-geozero-shp = "0.4.0"
-prettydiff = "0.6.4"
 
 # https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.release]

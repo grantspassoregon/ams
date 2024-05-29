@@ -2,8 +2,8 @@ use crate::prelude::{
     toggle_select, Columnar, Compare, Filtration, Parcels, TableConfig, TableView, Tabular,
 };
 use address::prelude::{
-    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024,
-    MatchRecord, MatchRecords, Portable, SpatialAddresses, Vectorized,
+    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024, MatchRecord,
+    MatchRecords, Portable, SpatialAddresses, Vectorized,
 };
 use aid::prelude::Clean;
 use egui::Ui;
