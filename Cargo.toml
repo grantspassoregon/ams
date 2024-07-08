@@ -16,11 +16,11 @@ address = { git = "https://github.com/grantspassoregon/address.git" }
 aid = { git = "https://github.com/grantspassoregon/aid.git", default-features = false, features = ["bin", "img", "gis", "gpu", "win"] }
 bincode = "1.3.3"
 csv = "1.3.0"
-egui = "0.27.2"
-egui_dock = { version = "0.12.0", features = ["serde"] }
-egui_extras = { version = "0.27.2", features = ["file", "chrono", "datepicker", "image"] }
-egui-wgpu = "0.27.2"
-egui-winit = "0.27.2"
+egui = "0.28.1"
+egui_dock = { version = "0.13.0", features = ["serde"] }
+egui_extras = { version = "0.28.1", features = ["file", "chrono", "datepicker", "image"] }
+egui-wgpu = "0.28.1"
+egui-winit = "0.28.1"
 galileo = { git = "https://github.com/Maximkaaa/galileo" }
 galileo-types = { git = "https://github.com/Maximkaaa/galileo" }
 geo = "0.28.0"
@@ -44,8 +44,8 @@ strum_macros = "0.26.2"
 tokio = { version = "1.37.0", features = ["tokio-macros", "full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-wgpu = "0.19.4"
-winit = "0.29.15"
+wgpu = "0.20.1"
+winit = "0.30.3"
 uuid = { version = "1.8.0", features = ["serde", "v4"] }
 
 # https://nnethercote.github.io/perf-book/build-configuration.html
