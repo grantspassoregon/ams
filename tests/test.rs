@@ -1,7 +1,3 @@
-use address::prelude::{
-    Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024, Portable,
-    SpatialAddresses,
-};
 use aid::{error::Bandage, prelude::Clean};
 use ams::prelude::*;
 use geo::algorithm::bool_ops::BooleanOps;
@@ -16,13 +12,13 @@ fn integration() -> Clean<()> {
     {};
     info!("Subscriber initialized.");
 
-    info!("Reading city addresses.");
-    city_addresses()?;
-    info!("City addresses successfully read.");
-
-    info!("Reading county addresses.");
-    county_addresses()?;
-    info!("County addresses successfully read.");
+    // info!("Reading city addresses.");
+    // city_addresses()?;
+    // info!("City addresses successfully read.");
+    //
+    // info!("Reading county addresses.");
+    // county_addresses()?;
+    // info!("County addresses successfully read.");
 
     info!("Reading city limits.");
     let _ = city_limits()?;
@@ -40,23 +36,23 @@ fn integration() -> Clean<()> {
     Ok(())
 }
 
-fn city_addresses() -> Clean<()> {
-    let addr =
-        GrantsPassSpatialAddresses::from_csv("c:/users/erose/geojson/addresses_20240508.csv")?;
-    let addr = SpatialAddresses::from(&addr.records[..]);
-    addr.save("data/addresses.data")?;
-    Ok(())
-}
+// fn city_addresses() -> Clean<()> {
+//     let addr =
+//         GrantsPassSpatialAddresses::from_csv("c:/users/erose/geojson/addresses_20240508.csv")?;
+//     let addr = SpatialAddresses::from(&addr[..]);
+//     addr.save("data/addresses.data")?;
+//     Ok(())
+// }
 
-fn county_addresses() -> Clean<()> {
-    let addr = JosephineCountySpatialAddresses2024::from_csv(
-        "c:/users/erose/geojson/county_addresses_20240508.csv",
-    )?;
-    let mut addr = SpatialAddresses::from(&addr.records[..]);
-    addr.citify();
-    addr.save("data/county_addresses.data")?;
-    Ok(())
-}
+// fn county_addresses() -> Clean<()> {
+//     let addr = JosephineCountySpatialAddresses2024::from_csv(
+//         "c:/users/erose/geojson/county_addresses_20240508.csv",
+//     )?;
+//     let mut addr = SpatialAddresses::from(&addr[..]);
+//     addr.standardize();
+//     addr.save("data/county_addresses.data")?;
+//     Ok(())
+// }
 
 fn city_limits() -> Clean<Boundary> {
     let cl = Boundary::from_shp_z("c:/users/erose/geojson/city_limits.shp", "City Limits")?;

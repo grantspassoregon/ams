@@ -1,0 +1,55 @@
+[groups.normal]
+# navigation with egui
+right = "h"
+left = "l"
+up = "k"
+down = "j"
+next = "n"
+previous = "N"
+next_window = "<cr> + n"
+previous_window = "<cr> + N"
+next_row = "r"
+previous_row = "e"
+
+# windowing with winit
+help = "<cr> + H"
+menu = "<cr> + M"
+decorations = "<alt> + d"
+fullscreen = "<alt> + f"
+maximize = "<alt> + s"
+minimize = "<alt> + S"
+
+# named keys
+enter = "Enter"
+escape = "Escape"
+arrow_left = "ArrowLeft"
+arrow_right = "ArrowRight"
+arrow_up = "ArrowUp"
+arrow_down = "ArrowDown"
+
+[groups.window]
+menu = "g"
+decorations = "d"
+fullscreen = "f"
+maximize = "s"
+minimize = "<cr> + s"
+
+[commands.window]
+name = "Window"
+binding = "<cr> + w"
+help = "Commands to control the window settings."
+
+[groups.navigation]
+left = "f"
+right = "d"
+up = "g"
+down = "s"
+next = "v"
+previous = "V"
+next_window = "<cr> + v"
+previous_window = "<cr> + V"
+
+[commands.navigation]
+name = "Navigation"
+binding = "<cr> + e"
+help = "Navigate focus points within the GUI."

@@ -2,6 +2,11 @@
 name = "ams"
 version = "0.1.0"
 edition = "2021"
+authors = ["Erik Rose <erose@grantspassoregon.gov>"]
+categories = ["science::geo"]
+keywords = ["address", "government", "gis"]
+repository = "https://github.com/grantspassoregon/ams"
+license = "Apache-2.0"
 
 [lib]
 path = "src/lib.rs"
@@ -13,12 +18,26 @@ name = "ams"
 [dependencies]
 address = { git = "https://github.com/grantspassoregon/address.git" }
 # aid = { path = "../aid", default-features = false, features = ["bin", "img", "win"] }
-aid = { git = "https://github.com/grantspassoregon/aid.git", default-features = false, features = ["bin", "img", "gis", "gpu", "win"] }
+aid = { git = "https://github.com/grantspassoregon/aid.git", default-features = false, features = [
+  "bin",
+  "img",
+  "gis",
+  "gpu",
+  "win",
+] }
 bincode = "1.3.3"
 csv = "1.3.0"
+derive_more = "0.99.18"
 egui = "0.27.2"
 egui_dock = { version = "0.12.0", features = ["serde"] }
-egui_extras = { version = "0.27.2", features = ["file", "chrono", "datepicker", "image"] }
+egui_extras = { version = "0.27.2", features = [
+  "file",
+  "chrono",
+  "datepicker",
+  "image",
+] }
+# egui-notify = "0.14.0"
+egui-notify = { path = "../egui-notify-local" }
 egui-wgpu = "0.27.2"
 egui-winit = "0.27.2"
 galileo = { git = "https://github.com/Maximkaaa/galileo" }
@@ -31,22 +50,29 @@ geozero-shp = "0.4.0"
 image = "0.25.1"
 indicatif = { version = "0.17.8", features = ["rayon"] }
 itertools = "0.13.0"
-num-traits = "0.2.18"
+names = "0.14.0"
+nom = "7.1.3"
+num-traits = "0.2.19"
 # polite = { path = "../cordial/polite", default-features = false, features = ["bin", "img", "gis", "win"] }
 prettydiff = "0.7.0"
 rayon = "1.10.0"
 rfd = { version = "0.14.1", features = ["tokio"] }
-serde = { version = "1.0.198", features = ["derive"] }
+serde = { version = "1.0.203", features = ["derive"] }
 spreadsheet = { git = "https://github.com/grantspassoregon/spreadsheet" }
 shapefile = "0.6.0"
-strum = { version = "0.26.2", features = ["strum_macros", "derive"] }
-strum_macros = "0.26.2"
-tokio = { version = "1.37.0", features = ["tokio-macros", "full"] }
+strum = { version = "0.26.3", features = ["strum_macros", "derive"] }
+strum_macros = "0.26.4"
+tokio = { version = "1.38.0", features = ["tokio-macros", "full"] }
+toml = "0.8.14"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+uuid = { version = "1.10.0", features = ["serde", "v4"] }
 wgpu = "0.19.4"
-winit = "0.29.15"
-uuid = { version = "1.8.0", features = ["serde", "v4"] }
+winit = "0.29.4"
+
+# Compatibility matrix
+# egui 0.27.2; egui_dock 0.12.0; egui-notify 0.14.0; wgpu 0.19.4; winit 0.29.4; galileo 0.1.0;
+# egui 0.28.1; egui_dock 0.13.0; egui-notify 0.15.0; wgpu 0.20.0; winit 0.29.4;
 
 # https://nnethercote.github.io/perf-book/build-configuration.html
 [profile.release]
@@ -55,4 +81,3 @@ lto = "fat"
 panic = "abort"
 # strip = "debuginfo"
 strip = "symbols"
-

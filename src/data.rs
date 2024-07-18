@@ -3,7 +3,7 @@ use crate::prelude::{
 };
 use address::prelude::{
     Addresses, GrantsPassSpatialAddresses, JosephineCountySpatialAddresses2024, MatchRecord,
-    MatchRecords, Portable, SpatialAddresses, Vectorized,
+    MatchRecords, Portable, SpatialAddresses,
 };
 use aid::prelude::Clean;
 use egui::Ui;
@@ -16,7 +16,7 @@ use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use tracing::info;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Data {
     pub addresses: Vec<SpatialAddresses>,
     pub address_sources: Vec<AddressSource>,
@@ -37,21 +37,21 @@ impl Data {
         if let Some(path) = files {
             if let Ok(values) = GrantsPassSpatialAddresses::from_csv(path.clone()) {
                 if values.len() > records.len() {
-                    self.address_sources.push(AddressSource::GrantsPass);
-                    records = SpatialAddresses::from(&values.records[..]);
+                    self.address_sources.push(AddressSource::grants_pass());
+                    records = SpatialAddresses::from(&values[..]);
                     // records.save("data/addresses.data").unwrap();
                 }
             }
             if let Ok(mut values) = JosephineCountySpatialAddresses2024::from_csv(path.clone()) {
                 if values.len() > records.len() {
-                    self.address_sources.push(AddressSource::JosephineCounty);
-                    values.citify();
-                    records = SpatialAddresses::from(&values.records[..]);
+                    self.address_sources.push(AddressSource::josephine_county());
+                    values.standardize();
+                    records = SpatialAddresses::from(&values[..]);
                     // records.save("data/county_addresses.data").unwrap();
                 }
             }
-            if records.records.len() > 0 {
-                info!("Records found: {}", records.records.len());
+            if records.len() > 0 {
+                info!("Records found: {}", records.len());
                 self.addresses.push(records);
             } else {
                 info!("No records found.");
@@ -60,7 +60,10 @@ impl Data {
     }
 
     pub fn sample_data(&mut self) -> Clean<()> {
-        self.address_sources = vec![AddressSource::GrantsPass, AddressSource::JosephineCounty];
+        self.address_sources = vec![
+            AddressSource::grants_pass(),
+            AddressSource::josephine_county(),
+        ];
         let mut records = Vec::new();
         records.push(SpatialAddresses::load("data/addresses.data")?);
         records.push(SpatialAddresses::load("data/county_addresses.data")?);
@@ -83,8 +86,8 @@ impl Data {
     }
 
     pub fn compare(&mut self, data: &Compare) -> TableView<MatchRecords, MatchRecord, String> {
-        let subject = &self.addresses[data.subject_idx].records[..];
-        let target = &self.addresses[data.target_idx].records[..];
+        let subject = &self.addresses[data.subject_idx][..];
+        let target = &self.addresses[data.target_idx][..];
         let config = TableConfig::new().with_search().with_slider();
         let table = TableView::with_config(MatchRecords::compare(subject, target), config);
         self.compare = Some(table.clone());
@@ -100,7 +103,7 @@ impl Data {
 
 impl Tabular<AddressSource> for Data {
     fn headers() -> Vec<String> {
-        AddressSource::names()
+        vec!["Address Source".to_owned()]
     }
 
     fn rows(&self) -> Vec<AddressSource> {
@@ -110,32 +113,45 @@ impl Tabular<AddressSource> for Data {
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, EnumIter, Deserialize, Serialize)]
 pub enum AddressSource {
-    GrantsPass,
-    JosephineCounty,
+    GrantsPass(uuid::Uuid),
+    JosephineCounty(uuid::Uuid),
+}
+
+impl AddressSource {
+    pub fn grants_pass() -> Self {
+        Self::GrantsPass(uuid::Uuid::new_v4())
+    }
+
+    pub fn josephine_county() -> Self {
+        Self::JosephineCounty(uuid::Uuid::new_v4())
+    }
 }
 
 impl Default for AddressSource {
     fn default() -> Self {
-        AddressSource::GrantsPass
+        AddressSource::GrantsPass(uuid::Uuid::new_v4())
     }
 }
 
 impl fmt::Display for AddressSource {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::GrantsPass => write!(f, "City of Grants Pass"),
-            Self::JosephineCounty => write!(f, "Josephine County"),
+            Self::GrantsPass(_) => write!(f, "City of Grants Pass"),
+            Self::JosephineCounty(_) => write!(f, "Josephine County"),
         }
     }
 }
 
 impl Columnar for AddressSource {
-    fn names() -> Vec<String> {
-        vec!["Address Source".to_owned()]
-    }
-
     fn values(&self) -> Vec<String> {
         vec![format!("{self}")]
+    }
+
+    fn id(&self) -> uuid::Uuid {
+        match self {
+            Self::GrantsPass(id) => *id,
+            Self::JosephineCounty(id) => *id,
+        }
     }
 }
 
@@ -182,32 +198,38 @@ impl fmt::Display for MatchColumns {
 }
 
 impl Columnar for MatchRecord {
-    fn names() -> Vec<String> {
-        MatchColumns::iter()
-            .map(|v| format!("{v}"))
-            .collect::<Vec<String>>()
-    }
+    // fn names() -> Vec<String> {
+    //     MatchColumns::iter()
+    //         .map(|v| format!("{v}"))
+    //         .collect::<Vec<String>>()
+    // }
 
     fn values(&self) -> Vec<String> {
         MatchColumns::iter()
             .map(|v| v.value(self))
             .collect::<Vec<String>>()
     }
+
+    fn id(&self) -> uuid::Uuid {
+        self.id
+    }
 }
 
 impl Tabular<MatchRecord> for MatchRecords {
     fn headers() -> Vec<String> {
-        MatchRecord::names()
+        MatchColumns::iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
     }
 
     fn rows(&self) -> Vec<MatchRecord> {
-        self.records.clone()
+        self.to_vec()
     }
 }
 
 impl Filtration<MatchRecords, String> for MatchRecords {
-    fn filter(self, filter: &String) -> Self {
-        MatchRecords::filter(self, filter)
+    fn filter(&mut self, filter: &String) -> Self {
+        MatchRecords::filter(self.clone(), filter)
     }
 }
 

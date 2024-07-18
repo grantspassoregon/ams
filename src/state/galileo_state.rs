@@ -32,6 +32,7 @@ pub struct GalileoState {
     pub addresses: Option<MatchPoints>,
     pub boundary: Option<BoundaryView>,
     pub lexis: Option<Vec<SpatialAddresses>>,
+    #[allow(dead_code)]
     pointer_position: Arc<RwLock<Point2d>>,
 }
 
@@ -179,7 +180,7 @@ impl GalileoState {
                 MatchSymbol {},
                 Crs::WGS84,
             ));
-            tracing::info!("Layer pushed to map.");
+            tracing::trace!("Layer pushed to map.");
         }
         Ok(())
     }
@@ -196,7 +197,7 @@ impl GalileoState {
                 BoundarySymbol {},
                 Crs::EPSG3857,
             ));
-            tracing::info!("Layer pushed to map.");
+            tracing::trace!("Layer pushed to map.");
         }
         Ok(())
     }
@@ -207,13 +208,11 @@ impl GalileoState {
         if let Some(lexis) = &self.lexis {
             let mut records = AddressPoints::from(&lexis[0]);
             records
-                .records
                 .iter_mut()
                 .map(|a| *a.address.status_mut() = AddressStatus::Current)
                 .for_each(drop);
             let mut other = AddressPoints::from(&lexis[1]);
             other
-                .records
                 .iter_mut()
                 .map(|a| *a.address.status_mut() = AddressStatus::Retired)
                 .for_each(drop);
@@ -221,17 +220,17 @@ impl GalileoState {
                 layers.pop();
             }
             layers.push(FeatureLayer::new(
-                records.records,
+                records.to_vec(),
                 AddressSymbol {},
                 Crs::EPSG3857,
             ));
-            tracing::info!("Included addresses pushed to map.");
+            tracing::trace!("Included addresses pushed to map.");
             layers.push(FeatureLayer::new(
-                other.records,
+                other.to_vec(),
                 AddressSymbol {},
                 Crs::EPSG3857,
             ));
-            tracing::info!("Excluded addresses pushed to map.");
+            tracing::trace!("Excluded addresses pushed to map.");
         }
 
         Ok(())

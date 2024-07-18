@@ -1,6 +1,5 @@
 use aid::prelude::Clean;
-use ams::prelude::{run, App};
-// use polite::Polite;
+use ams::app;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -15,14 +14,8 @@ async fn main() -> Clean<()> {
         .is_ok()
     {};
     tracing::info!("Subscriber initialized.");
-    let icon = App::load_icon(include_bytes!("../data/gp_logo.png"))?;
 
-    let event_loop = winit::event_loop::EventLoop::new()?;
-    let window = winit::window::WindowBuilder::new()
-        .with_title("AMS")
-        .with_window_icon(Some(icon))
-        .build(&event_loop)?;
-
-    run(window, event_loop).await?;
+    let (app, event_loop) = app::App::boot().await?;
+    app.run(event_loop).await?;
     Ok(())
 }

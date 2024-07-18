@@ -1,10 +1,8 @@
 use crate::prelude::{Data, Operations};
-use address::prelude::Portable;
-use egui::{Align, Color32, Context, Layout, RichText, ScrollArea, Sense, Slider, TextStyle, Ui};
+use egui::{Align, Color32, Context, Layout, RichText, ScrollArea, Sense, Slider, Ui};
 use egui_extras::{Column, TableBuilder};
 use itertools::sorted;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use tracing::info;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Default)]
@@ -20,7 +18,7 @@ impl UiState {
     }
 
     pub fn run(&mut self, ui: &Context) {
-        let text_style = TextStyle::Body;
+        // let text_style = egui::TextStyle::Body;
 
         egui::Window::new("AMS").show(ui, |ui| {
             ui.heading("Operations");
@@ -61,7 +59,7 @@ impl UiState {
                         ui.horizontal(|ui| {
                             ui.label(format!("{}", self.data.address_sources[i]));
                             ui.label(RichText::new("■").color(Color32::GREEN));
-                            ui.label(format!("{} records", address.records.len()));
+                            ui.label(format!("{} records", address.len()));
                         });
                     }
                 } else {
@@ -86,6 +84,15 @@ impl UiState {
         if self.operations.lexis_visible() {
             egui::Window::new("LexisNexis").show(ui, |ui| {
                 self.operations.lexis.combo(ui);
+            });
+        }
+
+        if self.operations.duplicates_visible() {
+            egui::Window::new("Duplicates").show(ui, |ui| {
+                if ui.button("Run").clicked() {
+                    tracing::info!("Run duplicates clicked.");
+                }
+                self.operations.duplicates(ui);
             });
         }
     }

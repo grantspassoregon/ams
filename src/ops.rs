@@ -3,7 +3,7 @@ use crate::prelude::{
 };
 use address::prelude::{
     Addresses, LexisNexis, LexisNexisItem, MatchRecord, MatchRecords, MatchStatus, Portable,
-    SpatialAddress, SpatialAddresses,
+    SpatialAddresses,
 };
 use aid::prelude::*;
 use geo::algorithm::contains::Contains;
@@ -23,9 +23,37 @@ pub struct Operations {
     pub load: bool,
     pub lexis: Lexis,
     pub lexis_on: bool,
+    pub subject: AddressSource,
+    pub subject_idx: usize,
+    // pub table: Option<TableView<AddressPoints, AddressPoint, String>>,
 }
 
 impl Operations {
+    pub fn duplicates(&mut self, ui: &mut egui::Ui) {
+        ui.push_id("subject", |ui| {
+            egui::ComboBox::from_label("Select subject source")
+                .selected_text(format!("{:?}", self.subject))
+                .show_ui(ui, |ui| {
+                    for (i, source) in AddressSource::iter().enumerate() {
+                        if ui
+                            .selectable_value(
+                                &mut self.subject,
+                                source.clone(),
+                                format!("{source}"),
+                            )
+                            .clicked()
+                        {
+                            self.subject_idx = i;
+                            info!("Subject set to {i}");
+                        }
+                    }
+                });
+        });
+        // if let Some(t) = &mut self.table {
+        //     t.table(ui);
+        // }
+    }
+
     pub fn compare_visible(&self) -> bool {
         self.compare.visible
     }
@@ -219,7 +247,6 @@ impl Lexis {
                     let target = &self.addresses[self.selected];
                     let ap = AddressPoints::from(target);
                     let gp = ap
-                        .records
                         .par_iter()
                         .map(|v| v.geo_point())
                         .collect::<Vec<geo::geometry::Point>>();
@@ -227,13 +254,13 @@ impl Lexis {
                         // info!("Point: {:#?}", pt);
                         // info!("Contained: {}", self.boundary.geometry.contains(pt));
                         if self.boundary.geometry.contains(pt) {
-                            records.push(target.records[i].clone());
+                            records.push(target[i].clone());
                         } else {
-                            other.push(target.records[i].clone());
+                            other.push(target[i].clone());
                         }
                     }
-                    let records = SpatialAddresses { records };
-                    let other = SpatialAddresses { records: other };
+                    let records = SpatialAddresses::from(&records[..]);
+                    let other = SpatialAddresses::from(&other[..]);
                     self.address_pkg = Some(vec![records.clone(), other.clone()]);
                     let lexis = records.lexis_nexis(&other).unwrap();
                     let view = Some(TableView::new(lexis));
@@ -270,11 +297,13 @@ impl Default for Lexis {
 
 impl Tabular<LexisNexisItem> for LexisNexis {
     fn headers() -> Vec<String> {
-        LexisNexisItem::names()
+        LexisNexisColumns::iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
     }
 
     fn rows(&self) -> Vec<LexisNexisItem> {
-        self.records.clone()
+        self.to_vec()
     }
 }
 
@@ -305,12 +334,6 @@ impl fmt::Display for LexisNexisColumns {
 }
 
 impl Columnar for LexisNexisItem {
-    fn names() -> Vec<String> {
-        LexisNexisColumns::iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<String>>()
-    }
-
     fn values(&self) -> Vec<String> {
         let number_from = format!("{}", self.address_number_from);
         let number_to = format!("{}", self.address_number_to);
@@ -329,11 +352,15 @@ impl Columnar for LexisNexisItem {
             zip,
         ]
     }
+
+    fn id(&self) -> uuid::Uuid {
+        self.id
+    }
 }
 
 impl Filtration<LexisNexis, String> for LexisNexis {
-    fn filter(self, filter: &String) -> Self {
+    fn filter(&mut self, filter: &String) -> Self {
         info!("Filtering not implemented, ignoring {}", filter);
-        self
+        self.clone()
     }
 }

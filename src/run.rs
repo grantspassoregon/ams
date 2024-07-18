@@ -1,4 +1,5 @@
-use crate::prelude::{Action, App};
+use crate::prelude::Action;
+use crate::state;
 use aid::prelude::*;
 use std::sync::Arc;
 use wgpu::SurfaceError;
@@ -12,7 +13,7 @@ use winit::{
 pub async fn run(window: Window, event_loop: EventLoop<()>) -> Clean<()> {
     let window = Arc::new(window);
 
-    let mut state = App::try_init(Arc::clone(&window)).await?;
+    let mut state = state::State::new(Arc::clone(&window)).await;
 
     let _ = event_loop.run(move |event, ewlt| {
         ewlt.set_control_flow(ControlFlow::Wait);
@@ -50,7 +51,7 @@ pub async fn run(window: Window, event_loop: EventLoop<()>) -> Clean<()> {
                         if event.state.is_pressed() {
                             tracing::info!("{:#?}", &event);
                             let action = if let Key::Character(ch) = event.logical_key.as_ref() {
-                                App::process_key_binding(&ch.to_uppercase(), &mods)
+                                state::State::process_key_binding(&ch.to_uppercase(), &mods)
                             } else {
                                 None
                             };

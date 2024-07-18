@@ -1,5 +1,8 @@
+pub mod act;
 pub mod actions;
 pub mod binding;
+pub mod command;
+pub mod focus;
 pub mod key_bindings;
 pub mod mouse_bindings;
 

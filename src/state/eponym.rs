@@ -1,6 +1,9 @@
+use crate::controls::{act, command};
 use crate::prelude::{
     Action, EguiState, GalileoState, MatchPoints, UiState, WgpuFrame, KEY_BINDINGS, MOUSE_BINDINGS,
 };
+use crate::state::lens;
+use crate::tab;
 use aid::prelude::Clean;
 use std::{iter, sync::Arc};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -9,7 +12,7 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::ModifiersState;
 use winit::window::{Fullscreen, Icon, Theme, Window, WindowId};
 
-pub struct App {
+pub struct State {
     pub surface: Arc<wgpu::Surface<'static>>,
     pub device: Arc<wgpu::Device>,
     pub queue: Arc<wgpu::Queue>,
@@ -17,22 +20,20 @@ pub struct App {
     pub size: PhysicalSize<u32>,
     pub window: Arc<Window>,
     pub egui_state: EguiState,
+    pub lens: lens::Lens,
+    pub tab: tab::TabState,
     pub ui_state: UiState,
     pub galileo_state: GalileoState,
     pub modifiers: ModifiersState,
     pub theme: Theme,
     /// Cursor position over the window.
     pub cursor_position: Option<PhysicalPosition<f64>>,
+    pub command: command::CommandMode,
+    pub command_key: String,
 }
 
-impl App {
+impl State {
     pub async fn new(window: Arc<Window>) -> Self {
-        Self::try_init(window)
-            .await
-            .expect("Could not initialize app.")
-    }
-
-    pub async fn try_init(window: Arc<Window>) -> Clean<Self> {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -40,7 +41,7 @@ impl App {
             ..Default::default()
         });
 
-        let surface = instance.create_surface(window.clone())?;
+        let surface = instance.create_surface(window.clone()).unwrap();
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -69,8 +70,8 @@ impl App {
                 },
                 None,
             )
-            .await?;
-        // .unwrap();
+            .await
+            .unwrap();
 
         let surface_caps = surface.get_capabilities(&adapter);
         let surface_format = surface_caps
@@ -106,8 +107,10 @@ impl App {
         );
 
         let theme = window.theme().unwrap_or(Theme::Dark);
+        let command = command::CommandMode::new();
+        tracing::trace!("Commands: {:#?}", &command);
 
-        Ok(Self {
+        Self {
             surface,
             device,
             queue,
@@ -115,12 +118,16 @@ impl App {
             size,
             window,
             egui_state,
+            lens: lens::Lens::new(),
+            tab: tab::TabState::default(),
             ui_state: UiState::new(),
             galileo_state,
             modifiers: Default::default(),
             theme,
             cursor_position: Default::default(),
-        })
+            command,
+            command_key: "normal".to_string(),
+        }
     }
 
     pub fn about_to_wait(&mut self) {
@@ -146,22 +153,31 @@ impl App {
 
         if let Some(table) = &mut self.ui_state.operations.compare.table {
             if let Some(package) = table.package.take() {
-                tracing::info!("Package taken.");
+                tracing::trace!("Package taken.");
                 let points = MatchPoints::from(&package);
                 self.galileo_state.addresses = Some(points);
                 self.galileo_state.load_addresses(1).unwrap();
-                tracing::info!("Records added to map.");
+                tracing::trace!("Records added to map.");
             }
         }
 
-        if let Some(pkg) = &self.ui_state.operations.lexis.boundary_pkg.take() {
-            self.galileo_state.boundary = Some(pkg.clone());
-            self.galileo_state.load_boundary(1).unwrap();
-        }
+        // Only load lexis nexis data if the lexis window is open
+        if self.ui_state.operations.lexis_visible() {
+            // Copy boundary layer to galileo
+            if let Some(pkg) = &self.ui_state.operations.lexis.boundary_pkg.take() {
+                // Move layer to galileo_state
+                self.galileo_state.boundary = Some(pkg.clone());
+                // Load layer into display.
+                self.galileo_state.load_boundary(1).unwrap();
+            }
 
-        if let Some(view) = &self.ui_state.operations.lexis.address_pkg.take() {
-            self.galileo_state.lexis = Some(view.clone());
-            self.galileo_state.load_lexis(2).unwrap();
+            // Load address results to galileo
+            if let Some(view) = &self.ui_state.operations.lexis.address_pkg.take() {
+                // Move layer data to galileo_state
+                self.galileo_state.lexis = Some(view.clone());
+                // Load layer into display.
+                self.galileo_state.load_lexis(2).unwrap();
+            }
         }
 
         self.window.request_redraw();
@@ -212,7 +228,8 @@ impl App {
             self.galileo_state.render(&wgpu_frame);
 
             self.egui_state
-                .render(&mut wgpu_frame, |ui| self.ui_state.run(ui));
+                // .render(&mut wgpu_frame, |ui| self.ui_state.run(ui));
+                .render(&mut wgpu_frame, |ui| self.tab.run_ui(ui));
         }
 
         self.queue.submit(iter::once(encoder.finish()));
@@ -239,9 +256,9 @@ impl App {
         })
     }
     pub fn print_help(&self) {
-        tracing::info!("Keyboard bindings:");
+        tracing::trace!("Keyboard bindings:");
         for binding in KEY_BINDINGS {
-            tracing::info!(
+            tracing::trace!(
                 "{:?}{:<10} - {} ({})",
                 binding.mods,
                 binding.trigger,
@@ -249,9 +266,9 @@ impl App {
                 binding.action.help(),
             );
         }
-        tracing::info!("Mouse bindings:");
+        tracing::trace!("Mouse bindings:");
         for binding in MOUSE_BINDINGS {
-            tracing::info!(
+            tracing::trace!(
                 "{:?}{:#?} - {} ({})",
                 binding.mods,
                 binding.trigger,
@@ -304,8 +321,8 @@ impl App {
 
     pub fn handle_action(
         &mut self,
-        event_loop: &EventLoop<()>,
-        window_id: WindowId,
+        _event_loop: &EventLoop<()>,
+        _window_id: WindowId,
         action: Action,
     ) {
         //     // let cursor_position = self.cursor_position;
@@ -350,8 +367,20 @@ impl App {
             //             if let Err(err) = self.create_window(event_loop, Some(tab_id)) {
             //                 eprintln!("Error creating new window: {err}");
             //             }
-            _ => tracing::info!("Other action!"),
+            _ => tracing::trace!("Other action!"),
         }
         //     }
+    }
+
+    pub fn act(&mut self, act: &act::AppAct) {
+        match *act {
+            act::AppAct::Help => {}
+            act::AppAct::Menu => self.show_menu(),
+            act::AppAct::Decorations => self.toggle_decorations(),
+            act::AppAct::Fullscreen => self.toggle_fullscreen(),
+            act::AppAct::Maximize => self.toggle_maximize(),
+            act::AppAct::Minimize => self.minimize(),
+            act::AppAct::Be => tracing::trace!("No action taken."),
+        }
     }
 }
