@@ -17,7 +17,7 @@ pub struct TableView<T: Tabular<U> + Filtration<T, V> + Clone + Default, U: Colu
     /// Configuration parameters for table creation.
     pub config: TableConfig,
     /// Focus tree for navigation.
-    pub tree: Option<focus::Tree>,
+    pub tree: focus::Tree,
     /// Holds user input for the search widget.
     pub search: String,
     /// Tracks rows selected by the user in the table.
@@ -43,7 +43,7 @@ pub struct TableView<T: Tabular<U> + Filtration<T, V> + Clone + Default, U: Colu
     // Indicates if the focus tree has been loaded.
     loaded: bool,
     // Index of leaf ids for the data in `view`.
-    leaves: Vec<Uuid>,
+    leaves: Vec<egui::Id>,
     // Marker to appease the type checker.
     phantom: PhantomData<U>,
 }
@@ -133,13 +133,11 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
                 };
 
                 if !self.loaded {
-                    if let Some(tree) = &mut self.tree {
-                        let entry_id = tree.leaf(entry.id);
-                        let clear_id = tree.leaf(clear.id);
-                        let node_id = tree.node();
-                        tree.with_leaf(node_id, entry_id);
-                        tree.with_leaf(node_id, clear_id);
-                    }
+                    let _ = self.tree.leaf(entry.id);
+                    let _ = self.tree.leaf(clear.id);
+                    let node_id = self.tree.node();
+                    self.tree.with_leaf(node_id, entry.id);
+                    self.tree.with_leaf(node_id, clear.id);
                 }
             });
         }
@@ -179,13 +177,11 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
                     };
                     // If loaded is false, the focus tree is new or has changed.
                     if !self.loaded {
-                        if let Some(tree) = &mut self.tree {
-                            let beginning_id = tree.leaf(beginning.id);
-                            let end_id = tree.leaf(end.id);
-                            let node_id = tree.node();
-                            tree.with_leaf(node_id, beginning_id);
-                            tree.with_leaf(node_id, end_id);
-                        }
+                        let _ = self.tree.leaf(beginning.id);
+                        let _ = self.tree.leaf(end.id);
+                        let node_id = self.tree.node();
+                        self.tree.with_leaf(node_id, beginning.id);
+                        self.tree.with_leaf(node_id, end.id);
                     }
                 });
             }
@@ -203,18 +199,16 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
     /// The `leaves` method creates a [`Leaf`] for each row in the table, and tracks their [`Uuid`]
     /// in the field `leaves`.
     pub fn leaves(&mut self, len: usize) {
-        if let Some(tree) = &mut self.tree {
-            let mut leaves = Vec::new();
-            let node_id = tree.node();
-            for _ in 0..(len - 1) {
-                let mut names = names::Generator::default();
-                let egui_id = egui::Id::new(names.next().unwrap());
-                let leaf_id = tree.leaf(egui_id);
-                leaves.push(leaf_id);
-                tree.with_leaf(node_id, leaf_id);
-            }
-            self.leaves = leaves;
+        let mut leaves = Vec::new();
+        let node_id = self.tree.node();
+        for _ in 0..(len - 1) {
+            let mut names = names::Generator::default();
+            let egui_id = egui::Id::new(names.next().unwrap());
+            let leaf = self.tree.leaf(egui_id);
+            leaves.push(leaf.id);
+            self.tree.with_leaf(node_id, egui_id);
         }
+        self.leaves = leaves;
     }
 
     /// UI display for the table view.
@@ -233,7 +227,9 @@ impl<T: Tabular<U> + Default + Filtration<T, V> + Clone, U: Columnar + Default, 
         // Collect the ids of each row.
         self.row_ids = rows.iter().map(|v| v.id().clone()).collect::<Vec<Uuid>>();
         if !self.loaded {
+            tracing::info!("Loading leaves.");
             self.leaves(rows.len());
+            self.loaded = true;
         }
 
         if !self.row_ids.is_empty() {

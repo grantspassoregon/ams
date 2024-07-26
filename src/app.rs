@@ -154,7 +154,7 @@ impl App {
                         act::NamedAct::Escape => {
                             self.close_requested();
                         }
-                        act::NamedAct::Enter => self.state.lens.enter(),
+                        act::NamedAct::Enter => self.state.lens.focus_tree.enter(),
                         _ => tracing::trace!("Named event detected"),
                     }
                 }

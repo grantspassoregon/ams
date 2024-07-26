@@ -10,7 +10,7 @@ pub struct Tree {
     /// The `flags` field indicates if a given window has been loaded into the tree.
     pub flags: HashMap<Uuid, bool>,
     /// The `leaves` field holds focus points of type ['Leaf'].
-    pub leaves: HashMap<Uuid, Leaf>,
+    pub leaves: HashMap<egui::Id, Leaf>,
     /// The `nodes` field holds focus points of type ['Node'].
     pub nodes: HashMap<Uuid, Node>,
     /// The `windows` field holds the ids of all windows in the user interface.
@@ -19,6 +19,8 @@ pub struct Tree {
     pub select: Option<Id>,
     /// The `current_leaf` field holds the current leaf in focus [`egui::Id`].
     pub current_leaf: Option<Id>,
+    /// The `enter` field registers presses of the Enter key by the user.
+    pub enter: Option<()>,
     // Tracks the currently selected node.
     node_index: usize,
     // Tracks the currently selected window.
@@ -35,11 +37,16 @@ impl Tree {
         self.leaves.extend(branch.leaves);
         self.nodes.extend(branch.nodes);
         self.windows.extend(branch.windows);
+        tracing::info!("Grafted: {:#?}", self);
     }
 
     /// Creates a [`Leaf`] from an `id` of type [`egui::Id`].
-    pub fn leaf(&mut self, id: Id) -> Uuid {
-        Leaf::from_id(id, self)
+    pub fn leaf(&mut self, id: Id) -> &Leaf {
+        Leaf::lazy_new(id, self)
+    }
+
+    pub fn get_leaf(&self, id: &egui::Id) -> Option<&Leaf> {
+        self.leaves.get(&id)
     }
 
     /// Registers a [`Node`] in the user interface.
@@ -48,7 +55,7 @@ impl Tree {
     }
 
     /// Creates a new window in the Tree.
-    pub fn window(&mut self) -> (Uuid, usize) {
+    pub fn window(&mut self) -> Uuid {
         // Create unique id for window.
         let id = Uuid::new_v4();
         // Push id to vector of window ids in self.
@@ -56,17 +63,32 @@ impl Tree {
         // Insert a flag for the window indicating it is not yet loaded.
         self.flags.insert(id, false);
         // Maybe unnecessary to return.
-        (id, self.windows.len() - 1)
+        id
     }
 
     pub fn window_index(&self) -> usize {
         self.window_index
     }
 
+    pub fn enter(&mut self) {
+        self.enter = Some(());
+    }
+
     /// Sets the active focus point to an `id` of type [`egui::Id`].
     pub fn select(&mut self, id: Id) {
         self.select = Some(id);
         self.current_leaf = self.select;
+        if let Some(leaf) = self.get_leaf(&id) {
+            if let Some(parent) = leaf.parent {
+                if let Some(index) = self.get_node_index(parent) {
+                    self.node_index = index;
+                }
+
+                if let Some(index) = self.get_window_index(parent) {
+                    self.window_index = index;
+                }
+            }
+        }
     }
 
     /// Returns the active focus point.
@@ -98,14 +120,13 @@ impl Tree {
         }
     }
 
-    pub fn with_leaf(&mut self, node: Uuid, leaf: Uuid) {
+    pub fn with_leaf(&mut self, node: Uuid, leaf: egui::Id) {
         Node::with_leaf(node, leaf, self);
     }
 
-    pub fn with_new_leaf(&mut self, node: Uuid, leaf: &egui::Response) -> Uuid {
-        let leaf_id = self.leaf(leaf.id);
-        self.with_leaf(node, leaf_id);
-        leaf_id
+    pub fn with_new_leaf(&mut self, node: Uuid, leaf: &egui::Response) {
+        let _ = self.leaf(leaf.id);
+        self.with_leaf(node, leaf.id);
     }
 
     pub fn with_node(&mut self, node: Node) {
@@ -119,11 +140,12 @@ impl Tree {
         }
     }
 
-    pub fn with_new_window(&mut self) -> (Uuid, usize) {
-        let (window_id, window_index) = self.window();
+    /// Creates a node in a new window and returns the node id.
+    pub fn with_new_window(&mut self) -> Uuid {
+        let window_id = self.window();
         let node_id = self.node();
         self.with_window(node_id, window_id);
-        (node_id, window_index)
+        node_id
     }
 
     pub fn get_window(&self, window: Uuid) -> Vec<Uuid> {
@@ -152,8 +174,6 @@ impl Tree {
         }
     }
 
-    pub fn current_window_index(&self) -> usize {}
-
     /// Advance focus to the next window in the `window_index`.  Wraps to the first window if at
     /// the end of the queue.
     pub fn next_window(&mut self) -> Uuid {
@@ -179,8 +199,9 @@ impl Tree {
 
     /// Returns the [`Uuid`] of the current node.
     pub fn current_node(&self) -> Uuid {
-        let id = self.current_window();
-        let nodes = self.get_window(id);
+        // let id = self.current_window();
+        // let nodes = self.get_window(id);
+        let nodes = self.nodes.values().map(|v| v.id()).collect::<Vec<Uuid>>();
         nodes[self.node_index]
     }
 
@@ -230,8 +251,8 @@ impl Tree {
         }
     }
 
-    /// Returns the [`Uuid`] of the active [`Leaf`] in focus, if present.
-    pub fn current_leaf(&self) -> Option<Uuid> {
+    /// Returns the [`egui::Id`] of the active [`Leaf`] in focus, if present.
+    pub fn current_leaf(&self) -> Option<egui::Id> {
         if let Some(node) = self.nodes.get(&self.current_node()) {
             Some(node.current_leaf())
         } else {
@@ -239,22 +260,8 @@ impl Tree {
         }
     }
 
-    /// Returns the [`egui::Id`] of the active [`Leaf`] in focus, if present.
-    pub fn current_leaf_id(&self) -> Option<egui::Id> {
-        if let Some(uuid) = self.current_leaf() {
-            if let Some(leaf) = self.leaves.get(&uuid) {
-                Some(leaf.id)
-            } else {
-                unreachable!()
-            }
-        } else {
-            tracing::info!("Leaf not found.");
-            None
-        }
-    }
-
     /// Advances focus to the next [`Leaf`] in `leaves`.
-    pub fn next_leaf(&mut self) -> Option<Uuid> {
+    pub fn next_leaf(&mut self) -> Option<egui::Id> {
         if let Some(node) = self.nodes.get_mut(&self.current_node()) {
             Some(node.next_leaf())
         } else {
@@ -263,7 +270,7 @@ impl Tree {
     }
 
     /// Move focus to the previous ['Leaf'] in `leaves`.
-    pub fn previous_leaf(&mut self) -> Option<Uuid> {
+    pub fn previous_leaf(&mut self) -> Option<egui::Id> {
         if let Some(node) = self.nodes.get_mut(&self.current_node()) {
             Some(node.previous_leaf())
         } else {
@@ -345,29 +352,107 @@ impl Tree {
         }
     }
 
-    pub fn update(&mut self, parent: &mut Tree, child: Tree) {
-        let check = match self.flags.get(&self.current_window()) {
-            Some(&bool) => Some(bool),
-            None => {
-                if self.flags.is_empty() {
-                    tracing::info!("Tree data not present.");
-                    tracing::info!("Grafting child to parent tree.");
-                    parent.graft(child.clone());
-                }
-                None
+    pub fn update(&mut self, child: Tree) {
+        if self.contains_new(&child) {
+            tracing::info!("Grafting child to tree.");
+            self.graft(child);
+            // self.refresh = true;
+        }
+
+        // let check = match self.flags.get(&self.current_window()) {
+        //     Some(&bool) => Some(bool),
+        //     None => {
+        //         if self.flags.is_empty() {
+        //             tracing::info!("Tree data not present.");
+        //             tracing::info!("Grafting child to parent tree.");
+        //             parent.graft(child.clone());
+        //         }
+        //         None
+        //     }
+        // };
+        // if let Some(loaded) = check {
+        //     if loaded == false {
+        //         self.graft(child);
+        //         tracing::info!("Grafting child directly to tree.");
+        //         if let Some(value) = self.flags.get_mut(&self.current_window()) {
+        //             tracing::info!("Marking widget as loaded.");
+        //             *value = true;
+        //             tracing::info!("{:#?}", self);
+        //         }
+        //     }
+        // }
+    }
+
+    pub fn contains(&self, id: &egui::Id) -> bool {
+        let mut check = false;
+        let values = self.leaves.values();
+        for value in values {
+            if value.id() == id {
+                check = true;
             }
-        };
-        if let Some(loaded) = check {
-            if loaded == false {
-                self.graft(child);
-                tracing::info!("Grafting child directly to tree.");
-                if let Some(value) = self.flags.get_mut(&self.current_window()) {
-                    tracing::info!("Marking load widget as loaded.");
-                    *value = true;
-                    tracing::info!("{:#?}", self);
+        }
+        check
+    }
+
+    pub fn contains_new(&self, other: &Tree) -> bool {
+        let mut check = false;
+        for value in other.leaves.values() {
+            if !self.contains(value.id()) {
+                check = true;
+            }
+        }
+        check
+    }
+
+    pub fn inspect(&self) {
+        tracing::info!("{:#?}", self);
+    }
+
+    pub fn get_window_index(&self, node_id: Uuid) -> Option<usize> {
+        if let Some(node) = self.get_node(node_id) {
+            for (i, id) in self.windows.iter().enumerate() {
+                if Some(*id) == node.parent {
+                    return Some(i);
                 }
             }
         }
+        return None;
+    }
+
+    pub fn get_node_index(&self, node_id: Uuid) -> Option<usize> {
+        let index = self
+            .nodes
+            .values()
+            .into_iter()
+            .enumerate()
+            .filter(|(_, v)| v.id() == node_id)
+            .map(|(i, _)| i)
+            .collect::<Vec<usize>>();
+        if index.is_empty() {
+            None
+        } else {
+            Some(index[0])
+        }
+    }
+
+    // pub fn get_leaf(&self, leaf_id: &egui::Id) -> Option<&Leaf> {
+    //     let values = self.leaves.values();
+    //     for value in values {
+    //         if value.id() == leaf_id {
+    //             return Some(value);
+    //         }
+    //     }
+    //     return None;
+    // }
+
+    pub fn get_node(&self, node_id: Uuid) -> Option<&Node> {
+        let values = self.nodes.values();
+        for value in values {
+            if value.id() == node_id {
+                return Some(value);
+            }
+        }
+        return None;
     }
 }
 
@@ -384,7 +469,7 @@ pub struct Node {
     pub nodes: Vec<Uuid>,
     /// The vector in the `leaves` field contains the [`Uuid`] of each child [`Leaf`] claiming this
     /// node as a parent.
-    pub leaves: Vec<Uuid>,
+    pub leaves: Vec<egui::Id>,
     /// The `window` field contains the [`Uuid`] of the associated window.
     pub window: Option<Uuid>,
     // Index of the current focus child [`Node`].
@@ -403,6 +488,10 @@ impl Node {
         }
     }
 
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+
     /// Creates an empty `Node` and inserts it into the [`Tree`] specified in parameter `tree`.
     /// Returns the [`Uuid`] for the new node.  Populate the new node by using the [`Uuid`] to obtain a mutable reference to
     /// the node.
@@ -419,13 +508,13 @@ impl Node {
     /// Uses the `node_id` and `leaf_id` to obtain mutable references to the node and leaf
     /// respectively within the [`Tree`] parameter `tree`.  Adds the given leaf to the child leaves
     /// of the given node.
-    pub fn with_leaf(node_id: Uuid, leaf_id: Uuid, tree: &mut Tree) {
+    pub fn with_leaf(node_id: Uuid, leaf_id: egui::Id, tree: &mut Tree) {
         let leaf = tree.leaves.get_mut(&leaf_id);
         let node = tree.nodes.get_mut(&node_id);
         if let Some(l) = leaf {
             l.parent = Some(node_id);
             if let Some(n) = node {
-                n.leaves.push(l.leaf_id);
+                n.leaves.push(l.id);
             }
         }
     }
@@ -444,14 +533,14 @@ impl Node {
         self.window = Some(window);
     }
 
-    /// The `current_leaf` method returns the [`Uuid`] of the [`Leaf`] in `leaves` at the `leaf_index`.
-    pub fn current_leaf(&self) -> Uuid {
+    /// The `current_leaf` method returns the [`egui::Id`] of the [`Leaf`] in `leaves` at the `leaf_index`.
+    pub fn current_leaf(&self) -> egui::Id {
         let id = self.leaves[self.leaf_index];
-        info!("Current leaf is {}", id);
+        info!("Current leaf is {:?}", id);
         id
     }
 
-    pub fn next_leaf(&mut self) -> Uuid {
+    pub fn next_leaf(&mut self) -> egui::Id {
         if self.leaf_index == (self.leaves.len() - 1) {
             self.leaf_index = 0;
         } else {
@@ -459,18 +548,18 @@ impl Node {
         }
         info!("Leaf index is {}", self.leaf_index);
         let id = self.leaves[self.leaf_index];
-        info!("Next leaf is {}", id);
+        info!("Next leaf is {:?}", id);
         id
     }
 
-    pub fn previous_leaf(&mut self) -> Uuid {
+    pub fn previous_leaf(&mut self) -> egui::Id {
         if self.leaf_index == 0 {
             self.leaf_index = self.leaves.len() - 1;
         } else {
             self.leaf_index -= 1;
         }
         let id = self.leaves[self.leaf_index];
-        info!("Previous leaf is {}", id);
+        info!("Previous leaf is {:?}", id);
         id
     }
 
@@ -509,25 +598,36 @@ impl Node {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Leaf {
     /// The `id` field is the [`egui::Id`] of the visual element.
-    pub id: Id,
-    /// The `leaf_id` field is the [`Uuid`] tracked by the [`Tree`].
-    pub leaf_id: Uuid,
+    pub id: egui::Id,
     /// The `parent` field is the [`Uuid`] of the parent [`Node`].
     pub parent: Option<Uuid>,
 }
 
 impl Leaf {
-    pub fn from_id(id: Id, tree: &mut Tree) -> Uuid {
-        // Creates a new internal id.
-        let leaf_id = Uuid::new_v4();
-        // Default to None for parent node.
-        let leaf = Self {
-            id,
-            leaf_id,
-            parent: None,
-        };
-        // Attach to focus tree.
-        tree.leaves.insert(leaf_id, leaf);
-        leaf_id
+    pub fn lazy_new(id: egui::Id, tree: &mut Tree) -> &Leaf {
+        if !tree.leaves.contains_key(&id) {
+            let leaf = Self { id, parent: None };
+            tree.leaves.insert(id, leaf);
+        }
+        tree.leaves
+            .get(&id)
+            .expect("Leaf is created if missing, so unwrap should not fail.")
+    }
+    // pub fn from_id(id: Id, tree: &mut Tree) -> Uuid {
+    //     // Creates a new internal id.
+    //     let leaf_id = Uuid::new_v4();
+    //     // Default to None for parent node.
+    //     let leaf = Self {
+    //         id,
+    //         leaf_id,
+    //         parent: None,
+    //     };
+    //     // Attach to focus tree.
+    //     tree.leaves.insert(leaf_id, leaf);
+    //     leaf_id
+    // }
+
+    pub fn id(&self) -> &egui::Id {
+        &self.id
     }
 }

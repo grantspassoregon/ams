@@ -20,7 +20,6 @@ pub struct Lens {
     pub focus_parcels: bool,
     // pub panel: Option<Panel<AddressPoint>>,
     pub parcels: Option<Arc<Parcels>>,
-    pub enter: Option<()>,
     pub operations: ops::Operations,
     pub data: data::Data,
     notify: egui_notify::Toasts,
@@ -77,7 +76,6 @@ impl Lens {
             focus_parcels: true,
             // panel,
             parcels,
-            enter: None,
             operations: Default::default(),
             data: Default::default(),
             notify: Default::default(),
@@ -116,28 +114,15 @@ impl Lens {
                     table.select_previous();
                 }
             }
+            act::EguiAct::InspectTree => self.focus_tree.inspect(),
             act::EguiAct::Be => tracing::trace!("Taking no action."),
         }
     }
 
-    /// Receiver for an ['Act'] sent from the main event loop.
-    pub fn enter(&mut self) {
-        tracing::trace!("State for Enter set.");
-        self.enter = Some(());
-    }
-
-    pub fn ams(&mut self, ui: &mut egui::Ui) {
-        // let text_style = egui::TextStyle::Body;
-
-        // The first time this functions runs, we want to record the focus points for later use,
-        // but we do not want this logic to run every frame.
-        // Create a new tree, but only swap it in for the actual tree if the flags field is empty.
+    /// Logic for the load widget.
+    pub fn load_widget(&mut self, ui: &mut egui::Ui) {
         let mut tree = focus::Tree::new();
-        // side panel id
-        let (side_panel, side_panel_index) = tree.window();
-        let parent_node = tree.node();
-        tree.with_window(parent_node, side_panel);
-
+        let parent_node = tree.with_new_window();
         // Create load button.
         let load = ui.button("Load Data");
         tree.with_new_leaf(parent_node, &load);
@@ -149,10 +134,17 @@ impl Lens {
         // Register click as enter press.
         if load.clicked() {
             tracing::info!("Load clicked.");
-            self.focus_tree.select(load.id);
-            self.enter();
+            self.operations.toggle_load();
         }
+        // Load widget logic.
+        self.operations
+            .load_widget(ui, &mut self.focus_tree, &mut self.data, &mut self.notify);
+    }
 
+    /// Logic for the sample data widget.
+    pub fn sample_widget(&mut self, ui: &mut egui::Ui) {
+        let mut tree = focus::Tree::new();
+        let parent_node = tree.with_new_window();
         let sample = ui.button("Sample Data");
         tree.with_new_leaf(parent_node, &sample);
         self.focus_tree.focusable(&sample);
@@ -160,10 +152,21 @@ impl Lens {
         // Register click as enter press.
         if sample.clicked() {
             tracing::info!("Sample clicked.");
-            self.focus_tree.select(sample.id);
-            self.enter();
+            self.data
+                .sample_data()
+                .expect("Could not open sample data.");
+            self.notify.success("Sample data loaded!");
         }
+        if self.focus_tree.contains_new(&tree) {
+            self.focus_tree.graft(tree);
+            tracing::info!("Sample widget tree added.");
+        }
+    }
 
+    /// Logic for the compare widget.
+    pub fn compare_widget(&mut self, ui: &mut egui::Ui) {
+        let mut tree = focus::Tree::new();
+        let parent_node = tree.with_new_window();
         // Create compare button.
         let compare = ui.button("Compare");
         tree.with_new_leaf(parent_node, &compare);
@@ -171,9 +174,37 @@ impl Lens {
 
         if compare.clicked() {
             tracing::info!("Compare clicked.");
-            self.focus_tree.select(compare.id);
-            self.enter();
+            self.operations.toggle_compare();
         }
+        if self.operations.compare_visible() {
+            egui::Window::new("Compare")
+                .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    self.operations
+                        .compare
+                        .combo(ui, &mut self.focus_tree, &mut self.data);
+                });
+        }
+        if self.focus_tree.contains_new(&tree) {
+            self.focus_tree.graft(tree);
+            tracing::info!("Sample widget tree added.");
+        }
+    }
+
+    pub fn ams(&mut self, ui: &mut egui::Ui) {
+        // let text_style = egui::TextStyle::Body;
+
+        // The first time this functions runs, we want to record the focus points for later use,
+        // but we do not want this logic to run every frame.
+        // Create a new tree, but only swap it in for the actual tree if the flags field is empty.
+        let mut tree = focus::Tree::new();
+        // side panel id
+        let parent_node = tree.with_new_window();
+
+        // Load widgets.
+        self.load_widget(ui);
+        self.sample_widget(ui);
+        self.compare_widget(ui);
 
         let drift = ui.button("Drift");
         tree.with_new_leaf(parent_node, &drift);
@@ -181,8 +212,7 @@ impl Lens {
 
         if drift.clicked() {
             tracing::info!("Drift clicked.");
-            self.focus_tree.select(drift.id);
-            self.enter();
+            self.operations.toggle_drift();
         }
 
         let duplicates = ui.button("Duplicates");
@@ -191,8 +221,7 @@ impl Lens {
 
         if duplicates.clicked() {
             tracing::info!("Duplicates clicked.");
-            self.focus_tree.select(duplicates.id);
-            self.enter();
+            self.operations.toggle_duplicates();
         }
 
         let lexis = ui.button("LexisNexis");
@@ -201,138 +230,75 @@ impl Lens {
 
         if lexis.clicked() {
             tracing::info!("LexisNexis clicked.");
-            self.focus_tree.select(lexis.id);
-            self.enter();
-        }
-
-        let load_widget_id = egui::Id::new("load_widget");
-        let load_widget = egui::Window::new("Load Data").id(load_widget_id);
-        let mut load_tree = focus::Tree::new();
-        let (load_widget_node, _) = load_tree.with_new_window();
-
-        if self.operations.load_visible() {
-            load_widget.show(ui.ctx(), |ui| {
-                ui.heading("Address Data");
-                let load_inner = ui.button("Load");
-                let _ = load_tree.with_new_leaf(load_widget_node, &load_inner);
-                load_tree.focusable(&load_inner);
-
-                if load_inner.clicked() {
-                    tracing::info!("LexisNexis clicked.");
-                    self.focus_tree.select(load_inner.id);
-                    self.enter();
-                }
-
-                if self.data.addresses.len() > 0 {
-                    for (i, address) in self.data.addresses.iter().enumerate() {
-                        ui.horizontal(|ui| {
-                            ui.label(format!("{}", self.data.address_sources[i]));
-                            ui.label(egui::RichText::new("■").color(egui::Color32::GREEN));
-                            ui.label(format!("{} records", address.len()));
-                        });
-                    }
-                } else {
-                    ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new("■").color(egui::Color32::RED));
-                        ui.label("No data loaded.");
-                    });
-                }
-                if self.focus_tree.window_index() == 1 {
-                    if let Some(_) = self.enter.take() {
-                        tracing::info!("Enter detected in load widget.");
-                        tracing::info!("Window index: {}", self.focus_tree.window_index());
-                        if let Some(id) = self.focus_tree.current_leaf_id() {
-                            tracing::info!("Current focus: {:?}", id);
-                            tracing::info!("Inner leaf id: {:?}", load_inner.id);
-                            if id == load_inner.id {
-                                tracing::info!("Inner load button in focus.");
-                                self.data.read_addresses();
-                                self.notify.success("Selected addresses loaded!");
-                                tracing::info!("Toast sent.");
-                            }
-                        }
-                    }
-                }
-                self.focus_tree.update(&mut tree, load_tree);
-            });
-        }
-
-        if self.operations.compare_visible() {
-            egui::Window::new("Compare").show(ui.ctx(), |ui| {
-                if ui.button("Run").clicked() {
-                    let table = Some(self.data.compare(&self.operations.compare));
-                    self.operations.compare.table = table;
-                }
-                self.operations.compare.combo(ui);
-            });
+            self.operations.toggle_lexis();
         }
 
         if self.operations.lexis_visible() {
-            egui::Window::new("LexisNexis").show(ui.ctx(), |ui| {
-                self.operations.lexis.combo(ui);
-            });
+            egui::Window::new("LexisNexis")
+                .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    self.operations
+                        .lexis
+                        .combo(ui, &mut self.focus_tree, &self.data);
+                });
         }
 
         if self.operations.duplicates_visible() {
-            egui::Window::new("Duplicates").show(ui.ctx(), |ui| {
-                if ui.button("Run").clicked() {
-                    tracing::info!("Run duplicates clicked.");
-                }
-                self.operations.duplicates(ui);
-            });
+            egui::Window::new("Duplicates")
+                .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    if ui.button("Run").clicked() {
+                        tracing::info!("Run duplicates clicked.");
+                    }
+                    self.operations.duplicates(ui, &mut self.data);
+                });
         }
 
-        egui::Window::new("Commands").show(ui.ctx(), |ui| self.command_view.show(ui));
+        egui::Window::new("Commands")
+            .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(0.0, 0.0))
+            .show(ui.ctx(), |ui| self.command_view.show(ui));
 
         // Wire up enter to take action.
-        if self.focus_tree.window_index() == 0 {
-            if let Some(_) = self.enter.take() {
-                tracing::info!("Enter detected in side panel.");
-                tracing::info!("Side panel index: {side_panel_index}");
-                tracing::info!("Window index: {}", self.focus_tree.window_index());
-                if let Some(id) = self.focus_tree.select {
-                    tracing::info!("Current focus: {:?}", id);
-                    if id == load.id {
-                        tracing::info!("Load button in focus.");
-                        self.operations.toggle_load();
-                    }
-                    if id == sample.id {
-                        tracing::info!("Sample button in focus.");
-                        self.data.sample_data().unwrap();
-                        self.notify.success("Sample data loaded!");
-                        tracing::info!("Toast sent.");
-                    }
-                    if id == compare.id {
-                        tracing::info!("Compare button in focus.");
-                        self.operations.toggle_compare();
-                    }
-                    if id == drift.id {
-                        tracing::info!("Drift button in focus.");
-                        self.operations.toggle_drift();
-                    }
-                    if id == duplicates.id {
-                        tracing::info!("Duplicates button in focus.");
-                        self.operations.toggle_duplicates();
-                    }
-                    if id == lexis.id {
-                        tracing::info!("LexisNexis button in focus.");
-                        if self.operations.lexis.addresses.len() != self.data.addresses.len() {
-                            self.operations.lexis.addresses = self.data.addresses.clone();
-                            self.operations.lexis.sources = self.data.address_sources.clone();
-                        }
-                        self.operations.toggle_lexis();
-                    }
-                } else {
-                    tracing::info!("Tree select is empty.");
-                }
-            }
+        // if let Some(_) = self.enter.take() {
+        //     tracing::info!("Enter detected in side panel.");
+        //     if let Some(id) = self.focus_tree.select {
+        //         tracing::info!("Current focus: {:?}", id);
+        //         if id == load.id {
+        //             tracing::info!("Load button in focus.");
+        //             self.operations.toggle_load();
+        //         }
+        //         if id == sample.id {
+        //             tracing::info!("Sample button in focus.");
+        //             self.data.sample_data().unwrap();
+        //             self.notify.success("Sample data loaded!");
+        //             tracing::info!("Toast sent.");
+        //         }
+        //         if id == compare.id {
+        //             tracing::info!("Compare button in focus.");
+        //             self.operations.toggle_compare();
+        //         }
+        //         if id == drift.id {
+        //             tracing::info!("Drift button in focus.");
+        //             self.operations.toggle_drift();
+        //         }
+        //         if id == duplicates.id {
+        //             tracing::info!("Duplicates button in focus.");
+        //             self.operations.toggle_duplicates();
+        //         }
+        //         if id == lexis.id {
+        //             tracing::info!("LexisNexis button in focus.");
+        //             self.operations.toggle_lexis();
+        //         }
+        //     } else {
+        //         tracing::info!("Tree select is empty.");
+        //     }
+        // }
+
+        if self.focus_tree.contains_new(&tree) {
+            self.focus_tree = tree;
+            tracing::info!("Focus tree updated.");
         }
 
-        if self.focus_tree.flags.is_empty() {
-            self.focus_tree = tree;
-            tracing::info!("Focus tree set.");
-            tracing::info!("{:#?}", self.focus_tree);
-        }
         self.notify.show(ui.ctx());
     }
 

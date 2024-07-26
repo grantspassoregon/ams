@@ -16,6 +16,7 @@ path = "src/main.rs"
 name = "ams"
 
 [dependencies]
+# address = { path = "../address" }
 address = { git = "https://github.com/grantspassoregon/address.git" }
 # aid = { path = "../aid", default-features = false, features = ["bin", "img", "win"] }
 aid = { git = "https://github.com/grantspassoregon/aid.git", default-features = false, features = [
@@ -47,7 +48,7 @@ geo-types = "0.7.13"
 geojson = "0.24.1"
 geozero = "0.13.0"
 geozero-shp = "0.4.0"
-image = "0.25.1"
+image = "0.25.2"
 indicatif = { version = "0.17.8", features = ["rayon"] }
 itertools = "0.13.0"
 names = "0.14.0"
@@ -57,13 +58,13 @@ num-traits = "0.2.19"
 prettydiff = "0.7.0"
 rayon = "1.10.0"
 rfd = { version = "0.14.1", features = ["tokio"] }
-serde = { version = "1.0.203", features = ["derive"] }
+serde = { version = "1.0.204", features = ["derive"] }
 spreadsheet = { git = "https://github.com/grantspassoregon/spreadsheet" }
 shapefile = "0.6.0"
 strum = { version = "0.26.3", features = ["strum_macros", "derive"] }
 strum_macros = "0.26.4"
-tokio = { version = "1.38.0", features = ["tokio-macros", "full"] }
-toml = "0.8.14"
+tokio = { version = "1.38.1", features = ["tokio-macros", "full"] }
+toml = "0.8.15"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 uuid = { version = "1.10.0", features = ["serde", "v4"] }

@@ -6,8 +6,6 @@ pub mod convert;
 pub mod data;
 pub mod ops;
 pub mod parcels;
-pub mod run;
-pub mod run_ui;
 pub mod state;
 pub mod tab;
 pub mod table;
@@ -25,8 +23,6 @@ pub mod prelude {
     pub use crate::data::{AddressSource, Data};
     pub use crate::ops::{Compare, Operations};
     pub use crate::parcels::{Parcel, Parcels};
-    pub use crate::run::run;
-    pub use crate::run_ui::UiState;
     pub use crate::state::{EguiState, GalileoState, State, WgpuFrame};
     pub use crate::table::{Columnar, Filtration, TableConfig, TableView, Tabular};
     pub use crate::utils::{from_csv, point_bounds, toggle_select};

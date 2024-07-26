@@ -129,6 +129,14 @@ impl TabState {
             tab.act(act);
         }
     }
+
+    pub fn tab(&mut self) -> Option<&mut lens::Lens> {
+        if let Some((_, tab)) = self.tree.find_active_focused() {
+            Some(tab)
+        } else {
+            None
+        }
+    }
 }
 
 impl Default for TabState {

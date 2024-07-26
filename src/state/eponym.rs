@@ -1,6 +1,6 @@
 use crate::controls::{act, command};
 use crate::prelude::{
-    Action, EguiState, GalileoState, MatchPoints, UiState, WgpuFrame, KEY_BINDINGS, MOUSE_BINDINGS,
+    Action, EguiState, GalileoState, MatchPoints, WgpuFrame, KEY_BINDINGS, MOUSE_BINDINGS,
 };
 use crate::state::lens;
 use crate::tab;
@@ -22,7 +22,6 @@ pub struct State {
     pub egui_state: EguiState,
     pub lens: lens::Lens,
     pub tab: tab::TabState,
-    pub ui_state: UiState,
     pub galileo_state: GalileoState,
     pub modifiers: ModifiersState,
     pub theme: Theme,
@@ -120,7 +119,6 @@ impl State {
             egui_state,
             lens: lens::Lens::new(),
             tab: tab::TabState::default(),
-            ui_state: UiState::new(),
             galileo_state,
             modifiers: Default::default(),
             theme,
@@ -151,28 +149,32 @@ impl State {
             self.galileo_state.handle_event(event);
         }
 
-        if let Some(table) = &mut self.ui_state.operations.compare.table {
-            if let Some(package) = table.package.take() {
-                tracing::trace!("Package taken.");
-                let points = MatchPoints::from(&package);
-                self.galileo_state.addresses = Some(points);
-                self.galileo_state.load_addresses(1).unwrap();
-                tracing::trace!("Records added to map.");
-            }
-        }
-
-        // Only load lexis nexis data if the lexis window is open
-        if self.ui_state.operations.lexis_visible() {
-            // Copy boundary layer to galileo
-            if let Some(pkg) = &self.ui_state.operations.lexis.boundary_pkg.take() {
-                // Move layer to galileo_state
-                self.galileo_state.boundary = Some(pkg.clone());
-                // Load layer into display.
-                self.galileo_state.load_boundary(1).unwrap();
+        // Get the current tab from the dock state.
+        if let Some(tab) = self.tab.tab() {
+            // Get the table view for the data in the active tab.
+            if let Some(table) = &mut tab.operations.compare.table {
+                // Retrieve any package data in the table view.
+                if let Some(package) = table.package.take() {
+                    tracing::trace!("Package taken.");
+                    let points = MatchPoints::from(&package);
+                    self.galileo_state.addresses = Some(points);
+                    self.galileo_state.load_addresses(1).unwrap();
+                    tracing::trace!("Records added to map.");
+                }
             }
 
+            // Only load lexis nexis data if the lexis window is open
+            if tab.operations.lexis_visible() {
+                if let Some(pkg) = &tab.operations.lexis.boundary_pkg.take() {
+                    tracing::info!("Copying boundary layer to Galileo.");
+                    // Move layer to galileo_state
+                    self.galileo_state.boundary = Some(pkg.clone());
+                    // Load layer into display.
+                    self.galileo_state.load_boundary(1).unwrap();
+                }
+            }
             // Load address results to galileo
-            if let Some(view) = &self.ui_state.operations.lexis.address_pkg.take() {
+            if let Some(view) = &tab.operations.lexis.address_pkg.take() {
                 // Move layer data to galileo_state
                 self.galileo_state.lexis = Some(view.clone());
                 // Load layer into display.

@@ -217,6 +217,7 @@ pub enum EguiAct {
     PreviousWindow,
     NextRow,
     PreviousRow,
+    InspectTree,
     #[default]
     Be,
 }
@@ -238,7 +239,8 @@ impl EguiAct {
             Self::PreviousWindow => 7,
             Self::NextRow => 8,
             Self::PreviousRow => 9,
-            Self::Be => 10,
+            Self::InspectTree => 10,
+            Self::Be => 11,
         }
     }
 }
@@ -270,6 +272,7 @@ impl std::string::ToString for EguiAct {
             Self::PreviousWindow => "Previous Window",
             Self::NextRow => "Next Row",
             Self::PreviousRow => "Previous Row",
+            Self::InspectTree => "Inspect Tree",
             Self::Be => "Be",
         };
         str.to_string()
@@ -290,6 +293,7 @@ impl std::str::FromStr for EguiAct {
             "previous_window" => Ok(Self::PreviousWindow),
             "next_row" => Ok(Self::NextRow),
             "previous_row" => Ok(Self::PreviousRow),
+            "inspect_tree" => Ok(Self::InspectTree),
             "be" => Ok(Self::Be),
             _ => Err(aid::prelude::Bandage::Hint("Undefined act.".to_string())),
         }
